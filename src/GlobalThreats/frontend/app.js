@@ -111,7 +111,8 @@ async function loadData() {
   }
   applyTimeline();
   updateHUD();
-  setStatus(allThreats.length + ' events · ' + new Date().toLocaleTimeString());
+  setStatus(allThreats.length + ' events');
+  updateLastRefresh();
 }
 
 function applyTimeline() {
@@ -255,49 +256,15 @@ document.querySelectorAll('.cat-btn').forEach(btn => {
 
 document.getElementById('timeline-slider').addEventListener('input', applyTimeline);
 
-// ── Exports ───────────────────────────────────────────────────────────────────
-document.getElementById('btn-json').addEventListener('click', () => {
-  dlBlob(new Blob([JSON.stringify(filtered, null, 2)], { type: 'application/json' }), 'ghost_threats.json');
-});
-
-document.getElementById('btn-csv').addEventListener('click', () => {
-  const cols = ['event_id','timestamp','country','ghost','type','severity'];
-  const rows = filtered.map(e => [
-    e.event_id, e.timestamp, e.source.country_anchor,
-    e.threat.ghost.join('|'), e.threat.type, e.risk.severity,
-  ]);
-  const csv = [cols, ...rows]
-    .map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(','))
-    .join('\n');
-  dlBlob(new Blob([csv], { type: 'text/csv' }), 'ghost_threats.csv');
-});
-
-document.getElementById('btn-refresh').addEventListener('click', async () => {
-  setStatus('Triggering refresh…');
+// ── Last refresh timestamp ────────────────────────────────────────────────────
+async function updateLastRefresh() {
   try {
-    const before = await (await fetch('/api/status')).json();
-    await fetch('/api/refresh');
-    const deadline = Date.now() + 90_000;
-    const poll = setInterval(async () => {
-      try {
-        const s = await (await fetch('/api/status')).json();
-        if (s.last_refresh !== before.last_refresh || Date.now() > deadline) {
-          clearInterval(poll);
-          loadData();
-        } else {
-          setStatus('Refreshing… ' + s.total_events + ' events so far');
-        }
-      } catch (_) { clearInterval(poll); loadData(); }
-    }, 2000);
-  } catch (_) { setTimeout(loadData, 3000); }
-});
-
-function dlBlob(blob, filename) {
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(blob), download: filename
-  });
-  a.click();
-  URL.revokeObjectURL(a.href);
+    const s = await (await fetch('/api/status')).json();
+    if (s.last_refresh) {
+      const el = document.getElementById('hud-last-refresh');
+      if (el) el.textContent = 'Last refresh: ' + new Date(s.last_refresh).toLocaleString();
+    }
+  } catch (_) {}
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

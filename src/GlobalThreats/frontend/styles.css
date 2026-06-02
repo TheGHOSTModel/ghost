@@ -120,24 +120,6 @@ html, body {
 .cat-btn.active { background: rgba(8,244,214,0.12); border-color: var(--teal); color: var(--teal); }
 
 /* ── Export ────────────────────────────────────────────── */
-.hud-export {
-  display: flex; gap: 0.35rem;
-}
-.export-btn {
-  flex: 1;
-  font-family: var(--font-mono); font-size: 0.6rem;
-  padding: 0.28rem 0.2rem;
-  background: var(--navy-light);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--teal-dim);
-  cursor: pointer;
-  transition: all 180ms ease;
-  text-align: center;
-}
-.export-btn:hover { color: var(--teal); border-color: var(--teal-dim); }
-.refresh-btn { color: var(--gray-dim); }
-.refresh-btn:hover { color: var(--off-white); }
 
 .hud-status {
   font-family: var(--font-mono); font-size: 0.54rem;

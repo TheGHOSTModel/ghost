@@ -347,36 +347,36 @@ footer a:hover { color: var(--teal); }
 
 /* ── About tab ─────────────────────────────────────────────── */
 
-.about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem; align-items: stretch; }
+.about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; align-items: stretch; }
 .author-card, .about-story { height: 100%; }
 @media (max-width: 800px) { .about-grid { grid-template-columns: 1fr; } }
-.author-card { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 8px; padding: 1.8rem; }
-.author-role { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.22em; color: var(--teal); text-transform: uppercase; margin-bottom: 0.8rem; }
-.author-name { font-family: var(--font-head); font-weight: 800; font-size: 1.4rem; color: var(--white); margin-bottom: 0.4rem; }
-.author-title { font-size: 0.82rem; color: var(--gray-dim); margin-bottom: 1.4rem; line-height: 1.4; }
-.author-links { display: flex; flex-direction: column; gap: 0.6rem; }
+.author-card { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 8px; padding: 1rem 1.2rem; }
+.author-role { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.22em; color: var(--teal); text-transform: uppercase; margin-bottom: 0.4rem; }
+.author-name { font-family: var(--font-head); font-weight: 800; font-size: 1.2rem; color: var(--white); margin-bottom: 0.3rem; }
+.author-title { font-size: 0.82rem; color: var(--gray-dim); margin-bottom: 0.8rem; line-height: 1.4; }
+.author-links { display: flex; flex-direction: column; gap: 0.4rem; }
 .author-link { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--gray-light); font-size: 0.82rem; transition: color 200ms; font-family: var(--font-mono); }
 .author-link:hover { color: var(--teal); }
 .author-link .link-label { font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gray-dim); min-width: 3rem; }
 .author-link .link-val { font-size: 0.75rem; }
-.mentor-note { margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid var(--navy-lighter); font-size: 0.75rem; color: var(--gray-dim); line-height: 1.5; }
+.mentor-note { margin-top: 0.8rem; padding-top: 0.7rem; border-top: 1px solid var(--navy-lighter); font-size: 0.75rem; color: var(--gray-dim); line-height: 1.5; }
 .mentor-note strong { color: var(--off-white); }
 
-.about-story { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 8px; padding: 1.8rem; }
-.story-section { margin-bottom: 1.8rem; }
+.about-story { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 8px; padding: 1rem 1.2rem; }
+.story-section { margin-bottom: 0.8rem; }
 .story-section:last-child { margin-bottom: 0; }
-.story-heading { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.2em; color: var(--teal-dim); text-transform: uppercase; margin-bottom: 0.8rem; }
-.story-body { font-size: 0.88rem; color: var(--gray-light); line-height: 1.65; }
-.story-body p { margin-bottom: 0.9rem; }
+.story-heading { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.2em; color: var(--teal-dim); text-transform: uppercase; margin-bottom: 0.4rem; }
+.story-body { font-size: 0.84rem; color: var(--gray-light); line-height: 1.5; }
+.story-body p { margin-bottom: 0.5rem; }
 .story-body p:last-child { margin-bottom: 0; }
 
-.beyond-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.6rem; margin-bottom: 3rem; }
-.beyond-tag { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 4px; padding: 0.6rem 0.8rem; font-family: var(--font-mono); font-size: 0.65rem; color: var(--gray-dim); text-align: center; letter-spacing: 0.1em; transition: border-color 200ms, color 200ms; }
+.beyond-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.4rem; margin-bottom: 0.8rem; }
+.beyond-tag { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 4px; padding: 0.35rem 0.6rem; font-family: var(--font-mono); font-size: 0.63rem; color: var(--gray-dim); text-align: center; letter-spacing: 0.1em; transition: border-color 200ms, color 200ms; }
 .beyond-tag:hover { border-color: var(--teal-dim); color: var(--teal-dim); }
 
-.about-takeaway { background: rgba(8,244,214,0.04); border: 1px solid rgba(8,244,214,0.2); border-radius: 8px; padding: 1.8rem; text-align: center; margin-bottom: 2rem; }
-.takeaway-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.28em; color: var(--teal); text-transform: uppercase; margin-bottom: 1rem; }
-.takeaway-text { font-size: 1.15rem; font-weight: 300; font-style: italic; color: var(--off-white); line-height: 1.6; }
+.about-takeaway { background: rgba(8,244,214,0.04); border: 1px solid rgba(8,244,214,0.2); border-radius: 8px; padding: 0.9rem 1.2rem; text-align: center; margin-bottom: 0.5rem; }
+.takeaway-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.28em; color: var(--teal); text-transform: uppercase; margin-bottom: 0.4rem; }
+.takeaway-text { font-size: 1rem; font-weight: 300; font-style: italic; color: var(--off-white); line-height: 1.5; }
 .takeaway-text strong { color: var(--teal); font-style: normal; font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
@@ -685,7 +685,7 @@ footer a:hover { color: var(--teal); }
        TAB 05 — ABOUT
        ══════════════════════════════════════════════════════════ -->
   <div class="tab-panel" data-tab-panel="about">
-    <div class="iframe-bar" style="margin-bottom:1.5rem;">
+    <div class="iframe-bar" style="margin-bottom:0.6rem;">
       <span class="iframe-bar-text">Threats shift constantly — <em>what they target rarely does</em> · GHOST is an open framework · theghostmodel.com</span>
     </div>
 
@@ -720,7 +720,7 @@ footer a:hover { color: var(--teal); }
     </div>
 
     <!-- Beyond gaming -->
-    <div style="background:var(--navy-light);border:1px solid var(--navy-lighter);border-radius:8px;padding:1.4rem 1.8rem;margin-bottom:1.2rem;display:flex;align-items:baseline;gap:1.8rem;flex-wrap:wrap;">
+    <div style="background:var(--navy-light);border:1px solid var(--navy-lighter);border-radius:8px;padding:0.6rem 1rem;margin-bottom:0.5rem;display:flex;align-items:baseline;gap:1.2rem;flex-wrap:wrap;">
       <span style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--teal-dim);white-space:nowrap;">Beyond gaming</span>
       <span style="font-size:0.88rem;color:var(--gray-dim);line-height:1.55;">GHOST was built for games — but the invariants generalise anywhere users interact, trade, and build trust with strangers under platform rules. The same five domains appear in every digital social system.</span>
     </div>
