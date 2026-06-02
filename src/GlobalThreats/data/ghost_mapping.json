@@ -1,0 +1,24 @@
+{
+  "GOVERNANCE": [
+    "api_abuse",
+    "policy_failure"
+  ],
+  "HARM": [
+    "phishing",
+    "harassment",
+    "scam"
+  ],
+  "OPERATIONS": [
+    "ddos",
+    "botnet",
+    "infra_attack"
+  ],
+  "SOCIAL": [
+    "account_takeover",
+    "impersonation"
+  ],
+  "TRADE": [
+    "fraud",
+    "asset_theft"
+  ]
+}

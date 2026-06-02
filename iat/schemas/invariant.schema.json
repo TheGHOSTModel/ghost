@@ -1,0 +1,189 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GHOST IAT Invariant",
+  "description": "Schema for an individual invariant file's YAML frontmatter. Status is optional and starts blank \u2014 the framework is game-agnostic and platforms fill in their own status.",
+  "type": "object",
+  "required": [
+    "id",
+    "domain",
+    "surface",
+    "invariant",
+    "telemetry",
+    "detection_signal",
+    "threats",
+    "tests",
+    "status_guidance"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[GHOST][0-9]{2}$"
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "Gameplay",
+        "Harm & Safety",
+        "Operations",
+        "Social Systems",
+        "Trade & Economy"
+      ]
+    },
+    "surface": {
+      "type": "string",
+      "enum": [
+        "User",
+        "Interaction",
+        "Environment",
+        "Value",
+        "Content",
+        "Operations"
+      ]
+    },
+    "invariant": {
+      "type": "string",
+      "minLength": 5
+    },
+    "status": {
+      "description": "Per-application status. BLANK by default. Set when adopting this catalog for a specific application.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "Active",
+            "Latent",
+            "Collapsed",
+            "Inactive (N/A)",
+            ""
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "platform_implementation": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rationale": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "One-line justification for the chosen status. Required when status is Latent, Collapsed, or Inactive (N/A); enforced by scripts/validate.py."
+    },
+    "telemetry": {
+      "type": "object",
+      "required": [
+        "event",
+        "fields"
+      ],
+      "properties": {
+        "event": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "type",
+              "required"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "integer",
+                  "number",
+                  "boolean",
+                  "array",
+                  "object"
+                ]
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "detection_signal": {
+      "type": "string",
+      "minLength": 5
+    },
+    "threats": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "tests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "assertion"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^T-[GHOST][0-9]{2}-[0-9]{2}$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "EXISTENCE",
+              "SCHEMA",
+              "FILTER"
+            ]
+          },
+          "assertion": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "status_guidance": {
+      "type": "object",
+      "required": [
+        "active",
+        "latent",
+        "collapsed",
+        "inactive"
+      ],
+      "properties": {
+        "active": {
+          "type": "string"
+        },
+        "latent": {
+          "type": "string"
+        },
+        "collapsed": {
+          "type": "string"
+        },
+        "inactive": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

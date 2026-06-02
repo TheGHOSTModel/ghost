@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Live Threat Radar · GHOST Intelligence Globe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@300;400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+<!-- Globe container -->
+<div id="globe-container"></div>
+
+<!-- Top-right HUD -->
+<div id="hud">
+  <div class="hud-title">
+    <span class="ghost-mark">G·H·O·S·T</span>
+    <span class="hud-sub">Live Threat Radar</span>
+  </div>
+  <div class="hud-stats" id="hud-stats">
+    <div class="stat-row">
+      <span class="stat-label">Today</span>
+      <span class="stat-val" id="stat-today">—</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">This Month</span>
+      <span class="stat-val" id="stat-month">—</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-row ghost-row">
+      <span class="cat g" title="Governance">G</span><span class="cat-val" id="cat-g">0</span>
+      <span class="cat h" title="Harm">H</span><span class="cat-val" id="cat-h">0</span>
+      <span class="cat o" title="Operations">O</span><span class="cat-val" id="cat-o">0</span>
+      <span class="cat s" title="Social">S</span><span class="cat-val" id="cat-s">0</span>
+      <span class="cat t" title="Trade">T</span><span class="cat-val" id="cat-t">0</span>
+    </div>
+  </div>
+
+  <!-- Time filter -->
+  <div class="hud-filters">
+    <button class="filter-btn active" data-window="all">All</button>
+    <button class="filter-btn" data-window="24h">24h</button>
+    <button class="filter-btn" data-window="7d">7d</button>
+    <button class="filter-btn" data-window="30d">30d</button>
+  </div>
+
+  <!-- GHOST filter -->
+  <div class="hud-filters ghost-filter">
+    <button class="cat-btn active" data-cat="ALL">ALL</button>
+    <button class="cat-btn g-btn" data-cat="G">G</button>
+    <button class="cat-btn h-btn" data-cat="H">H</button>
+    <button class="cat-btn o-btn" data-cat="O">O</button>
+    <button class="cat-btn s-btn" data-cat="S">S</button>
+    <button class="cat-btn t-btn" data-cat="T">T</button>
+  </div>
+
+  <!-- Export -->
+  <div class="hud-export">
+    <button class="export-btn" id="btn-json">⬇ JSON</button>
+    <button class="export-btn" id="btn-csv">⬇ CSV</button>
+    <button class="export-btn refresh-btn" id="btn-refresh">↺ Refresh</button>
+  </div>
+
+  <!-- Status -->
+  <div class="hud-status" id="hud-status">Loading…</div>
+</div>
+
+<!-- Hover tooltip -->
+<div id="tooltip" class="hidden">
+  <div class="tt-title" id="tt-title"></div>
+  <div class="tt-meta">
+    <span class="tt-ghost" id="tt-ghost"></span>
+    <span class="tt-sep">·</span>
+    <span class="tt-type" id="tt-type"></span>
+  </div>
+  <div class="tt-country" id="tt-country"></div>
+  <div class="tt-sev" id="tt-sev"></div>
+</div>
+
+<!-- Side panel -->
+<div id="side-panel" class="hidden">
+  <button id="panel-close">✕</button>
+  <div class="panel-ghost-tag" id="panel-ghost-tag"></div>
+  <h2 id="panel-title"></h2>
+  <div class="panel-meta">
+    <span id="panel-source"></span> · <span id="panel-country"></span>
+    <span class="panel-sev" id="panel-sev"></span>
+  </div>
+  <p id="panel-desc"></p>
+  <div class="panel-section" id="panel-indicators-wrap">
+    <div class="panel-section-title">Indicators</div>
+    <div id="panel-indicators"></div>
+  </div>
+  <div class="panel-ts" id="panel-ts"></div>
+  <a id="panel-link" class="panel-link" target="_blank" rel="noopener">View Source →</a>
+</div>
+
+<!-- Timeline slider -->
+<div id="timeline-wrap">
+  <label class="tl-label" for="timeline-slider">Timeline</label>
+  <input type="range" id="timeline-slider" min="0" max="100" value="100"/>
+  <span id="timeline-val">All time</span>
+</div>
+
+<script src="/lib/globe.gl.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

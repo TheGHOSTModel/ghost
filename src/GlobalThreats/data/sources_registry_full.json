@@ -1,0 +1,149 @@
+{
+  "version": "1.0",
+  "sources": [
+    {
+      "id": "cisa",
+      "url": "https://www.cisa.gov/news.xml",
+      "country": "USA",
+      "ghost": [
+        "G"
+      ]
+    },
+    {
+      "id": "bsi",
+      "url": "https://www.bsi.bund.de/SiteGlobals/Functions/RSSFeed/RSSNewsfeed/RSSNewsfeed.xml",
+      "country": "Germany",
+      "ghost": [
+        "G"
+      ]
+    },
+    {
+      "id": "openphish",
+      "url": "https://openphish.com/feed.txt",
+      "country": "USA",
+      "ghost": [
+        "H",
+        "T"
+      ]
+    },
+    {
+      "id": "phishtank",
+      "url": "https://data.phishtank.com/data/online-valid.json",
+      "country": "USA",
+      "ghost": [
+        "H",
+        "T"
+      ]
+    },
+    {
+      "id": "kaspersky",
+      "url": "https://www.kaspersky.com/blog/rss",
+      "country": "Russia",
+      "ghost": [
+        "H",
+        "T"
+      ]
+    },
+    {
+      "id": "sans",
+      "url": "https://isc.sans.edu/rssfeed.xml",
+      "country": "USA",
+      "ghost": [
+        "O"
+      ]
+    },
+    {
+      "id": "abusech",
+      "url": "https://urlhaus.abuse.ch/downloads/csv/",
+      "country": "Switzerland",
+      "ghost": [
+        "O",
+        "T",
+        "S"
+      ]
+    },
+    {
+      "id": "feodo",
+      "url": "https://feodotracker.abuse.ch/downloads/ipblocklist.csv",
+      "country": "Switzerland",
+      "ghost": [
+        "O"
+      ]
+    },
+    {
+      "id": "firehol",
+      "url": "https://iplists.firehol.org",
+      "country": "Greece",
+      "ghost": [
+        "O"
+      ]
+    },
+    {
+      "id": "spamhaus",
+      "url": "https://www.spamhaus.org/drop/drop.txt",
+      "country": "UK/Switzerland",
+      "ghost": [
+        "S",
+        "H"
+      ]
+    },
+    {
+      "id": "abuseipdb",
+      "url": "https://api.abuseipdb.com",
+      "country": "Global",
+      "ghost": [
+        "S",
+        "O"
+      ]
+    },
+    {
+      "id": "stopforumspam",
+      "url": "https://www.stopforumspam.com/downloads/toxic_ip_cidr.txt",
+      "country": "Global",
+      "ghost": [
+        "S"
+      ]
+    },
+    {
+      "id": "otx",
+      "url": "https://otx.alienvault.com/api/v1/pulses/subscribed",
+      "country": "USA",
+      "ghost": [
+        "T",
+        "O",
+        "S"
+      ]
+    },
+    {
+      "id": "therecord",
+      "url": "https://therecord.media/feed",
+      "country": "USA",
+      "ghost": [
+        "T",
+        "G"
+      ]
+    },
+    {
+      "id": "helpnet",
+      "url": "https://www.helpnetsecurity.com/feed/",
+      "country": "Global",
+      "ghost": [
+        "H",
+        "O",
+        "T"
+      ]
+    },
+    {
+      "id": "ctidigest",
+      "url": "https://ctidigest.com",
+      "country": "Global",
+      "ghost": [
+        "G",
+        "H",
+        "O",
+        "S",
+        "T"
+      ]
+    }
+  ]
+}

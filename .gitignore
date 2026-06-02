@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+*.log
+ghostv2.log
+ghostv2_radar.log
+ghost_ai_debug.log
+.DS_Store
+Thumbs.db
+node_modules/
+build/
+dist/
+*.egg-info/
+.venv/
+venv/

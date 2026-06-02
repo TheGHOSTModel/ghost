@@ -1,224 +1,141 @@
-G.H.O.S.T — A Player‑First Threat Modeling Framework for Multiplayer Games
+# G.H.O.S.T — Gameplay · Harm · Operations · Social · Trade
 
-A practical approach to attack-surface testing Services, Data Flows, and Data Stores across gameplay, safety, operations, social systems, and economies.
+**G.H.O.S.T** is an open threat-modelling framework for multiplayer gaming platforms. It maps the five domains where harm originates — Gameplay integrity, Harm & Safety, Operations, Social systems, and Trade & Economy — and provides a structured method for assessing whether a platform's telemetry and AI systems can detect, attribute, and respond to threats in real time.
 
-Overview
+> Most threats in gaming don't break the system — they pass *through* it, using legitimate interactions that cross domain boundaries undetected. GHOST is designed to find them.
 
-G.H.O.S.T (Gameplay • Harm • Operations • Social • Trade) is a reimagined threat‑modeling framework built for online and mobile multiplayer platforms.
+---
 
-Traditional enterprise models treat systems as endpoints. G.H.O.S.T instead treats a multiplayer game as a living society—with players, economies, social structures, operational pressure points, and content‑creation pipelines.
+## The Five Domains
 
-This repository introduces the G.H.O.S.T model and provides practical methods to operationalize it as test cases that probe Services → Data Flows → Data Stores across components such as Chat, Game Servers, Marketplaces, and UGC pipelines.
+| Letter | Domain | Core question |
+|--------|--------|---------------|
+| **G** | Gameplay | Are game rules enforced server-side with full observability? |
+| **H** | Harm & Safety | Can harmful content and exploitation be detected and attributed? |
+| **O** | Operations | Are infrastructure anomalies, floods, and failures observable? |
+| **S** | Social | Can coordinated inauthentic behaviour and identity abuse be measured? |
+| **T** | Trade & Economy | Are economic actions atomic, attributable, and manipulation-resistant? |
 
-The goal: a player-first, repeatable, measurable approach to multiplayer security, fairness, and safety.
+---
 
-1. Why a New Approach?
-Multiplayer platforms differ from conventional apps. Risks emerge from:
+## Repository Structure
 
-Player behaviors
-Social coordination
-Market incentives
-Operational load
+```
+ghost/
+├── README.md                    — this file
+├── docs/
+│   ├── architecture.md          — overall GHOST web application schematic
+│   ├── live-sim.md              — Live Simulation harness design
+│   └── threat-radar.md         — Live Threat Radar design
+├── iat/                         — Invariant-Anchored Telemetry framework
+│   ├── README.md                — IAT overview and adoption guide
+│   ├── CATALOG.md               — master index of all 50 invariants
+│   ├── invariants/              — one .md file per invariant (G01–T10)
+│   ├── schemas/                 — JSON Schema for invariant frontmatter
+│   ├── scripts/                 — validate.py and build-index.py
+│   └── dist/                   — generated invariants.json
+├── src/                         — application source code
+│   ├── server.py                — FastAPI backend (game engine + telemetry + GHOST AI)
+│   ├── ghost_ai.py              — LLM harm detection module
+│   ├── app.html                 — GHOST web application shell (5 tabs)
+│   ├── index.html               — Live Simulation frontend
+│   ├── iat.html                 — Framework & Invariants catalog frontend
+│   └── GlobalThreats/          — Threat Radar backend + frontend
+├── templates/                   — IAT spreadsheet templates
+├── scoring/                     — AGE-X scoring matrix
+└── deck/                        — Slides and presentation notes
+```
 
-Threats spread:
+---
 
-Horizontally across identity, messaging, trade, UGC
-Vertically across client ↔ backend ↔ data ledgers
-Exponentially through network effects (cohorts, raids, cartels)
+## What's in this repo
 
-G.H.O.S.T captures these dynamics and turns them into concrete tests grounded in:
-Services → Data Flows → Data Stores
+### `/iat` — Invariant-Anchored Telemetry
 
-2. The G.H.O.S.T Model (Concept → Practice)
+Fifty universal invariants across five domains. Each invariant defines:
+- A property the platform must preserve
+- The telemetry event that proves whether it is upheld
+- A detection signal (the filter that fires when the invariant collapses)
+- Threat catalogue entries
+- Three test cases (EXISTENCE, SCHEMA, FILTER)
 
-G — Gameplay Integrity
-Fairness & authority: exploits, automation, desync. Ensure authoritative server decisions.
+[Browse the full catalog →](iat/CATALOG.md)
 
-H — Harm & Safety
-Player wellbeing: harassment, grooming, harmful content. Ensure protection and response workflows.
+### `/docs` — Architecture & Design
 
-O — Operations
-Availability & performance: DoS, overload, malformed payloads. Ensure resilience & SLOs.
+- [Overall application architecture →](docs/architecture.md)
+- [Live Simulation design →](docs/live-sim.md)
+- [Threat Radar design →](docs/threat-radar.md)
 
-S — Social Systems
-Identity & coordination: impersonation, brigading, infiltration. Ensure trust and governance.
+### `/src` — Application Source
 
-T — Trade & Economy
-Value stability: duplication, fraud, manipulation. Ensure atomicity & ledger integrity.
+The **GHOST Web Application** is a five-tab single-page app that demonstrates the framework in action:
 
-Each G/H/O/S/T vector is tested at three lenses:
+| Tab | What it does |
+|-----|-------------|
+| 01 Framework | Interactive walkthrough of the GHOST domains and surfaces |
+| 02 Invariants | Full IAT catalog with 50 invariants and telemetry specs |
+| 03 Live Sim | Multiplayer TicTacToe harness with real-time GHOST AI monitoring |
+| 04 Threat Radar | Live global threat intelligence globe — feeds classified by GHOST domain |
+| 05 About | Framework background and links |
 
-Services — validation, policy, issuance, reconciliation
+### `/templates` — IAT Templates
 
-Data Flows — boundaries where identity/authority/value transitions
+Blank IAT spreadsheet for adopting teams to assess their platform against the 50 invariants.
 
-Data Stores — ledgers/state that must remain correct, auditable, tamper‑evident
+### `/scoring` — AGE-X Matrix
 
+Weighted scoring matrix for prioritising which invariants to address first, based on: User Base Coverage, CIA impact, financial exposure, incident likelihood, propagation potential, youth exposure, and regulatory factors.
 
-3. Player‑First Layering
+### `/deck` — Slides
 
-Layers 1–5 are player‑facing: Identity, Interaction, Shared World, Value, Creation
-Layer 6 is the operational substrate: transport, storage, pipelines, observability
-Players traverse Layers 1–5; Layer 6 powers everything.
-This clarifies where threats are experienced vs. where enforcement lives.
+Presentation materials for the GHOST framework.
 
-5. Prioritization (Weighted 1–5 Scoring)
-   
-Score each component using:
+---
 
-UBC (User Base Coverage)
+## Getting started
 
-CIA (Confidentiality, Integrity, Availability)
+### Run the application locally
 
-FE (Financial Exposure)
+**Requirements:** Python 3.12+, pip
 
-IL (Incident Likelihood)
+```bash
+# Install dependencies
+pip install fastapi uvicorn httpx feedparser apscheduler truststore
 
-PP (Propagation Potential)
+# Start the main app (port 8080)
+cd src
+python -m uvicorn server:app --host 127.0.0.1 --port 8080 --reload
 
-AGE X (Youth Exposure)
+# Start the Threat Radar (port 8081)
+cd src/GlobalThreats
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8081
 
-RPE (Regulation / Policy Exposure)
+# Open the app
+# http://localhost:8080/app.html
+```
 
-Example formula:
+### Adopt the IAT framework
 
-Priority = 0.20*UBC + 0.20*CIA + 0.15*FE + 0.15*IL + 0.10*PP + 0.10*AGE_X + 0.10*RPE
+```bash
+cd iat
 
-This yields Tier 1 targets for first‑wave threat modeling & testing.
+# Validate all invariants
+python scripts/validate.py
 
-5. Component Decomposition (Reusable Template)
-   
-Services
+# Regenerate catalog and JSON
+python scripts/build-index.py
+```
 
-Primary Service → Sub‑service A, B
+---
 
-Secondary Service → Sub‑service A, B
+## Links
 
-Data Stores
+- Website: [theghostmodel.com](https://theghostmodel.com)
+- LinkedIn: [harikrishnanss](https://linkedin.com/in/harikrishnanss)
 
-Store 1 → Dataset A, B
+---
 
-Store 2 → Dataset A, B
+## Licence
 
-Data Flows
-
-Flow 1 — Actor → Path → Component
-
-Flow 2 — External → Component
-
-Flow 3 — Component → Audit/Logging
-
-
-6. Method: From Risks → Tests
-   
-G — Gameplay
-
-Reject impossible actions
-Detect bot‑like timing
-Preserve authoritative state
-
-H — Harm
-
-Score content
-Apply allow/redact/block
-Retain moderation evidence
-
-O — Operations
-
-Apply quotas
-Validate schemas
-Emit overload/latency signals
-
-S — Social
-
-Detect impersonation
-Track cohort behaviors
-Store identity checks
-
-T — Trade
-
-Enforce idempotency
-Validate order→grant
-Use append‑only ledgers
-
-
-7. Test Case Template
-   
-ID: <component>-<GHOST>-<shortName>
-
-Goal:
-
-Scope: Service | Flow | Store
-
-Preconditions:
-
-Steps:
-
-Expected:
-
-Telemetry:
-
-Owner:
-
-Minimum acceptance:
-
-≥95% decision parity
-
-p95/p99 latency met
-
-No data loss / double issuance
-
-Server‑signed audit trails
-
-
-8. Telemetry & Observability (Event Families)
-
-Decision events
-
-Integrity events
-
-Operational events
-
-Safety events
-
-Fraud signals
-
-Audit trails (correlatable)
-
-Suggested fields: model_version, policy_version, actor_id, action_id, verdict.
-
-9. Pluggable Controls (Detector Mesh)
-    
-Reusable detectors:
-
-Impersonation AI
-
-Abusive Language AI
-
-Content Integrity AI
-
-Anomaly AI
-
-Trust Graph
-
-DoS Pattern Detector
-
-These can be synchronous (inline) or async (heavy scans).
-
-10. Governance, SLAs, Ethics
-
-Favor review over block for high‑cost errors
-
-Strong defaults for youth protection
-
-Clear player messaging, appeals
-
-Data minimization, regional retention
-
-G.H.O.S.T acts as a cross‑discipline alignment layer for legal, product, operations, and engineering.
-
-Conclusion
-
-G.H.O.S.T provides a player‑first, component‑agnostic, repeatable, measurable approach to multiplayer threat modeling.
-It targets the exact places where decisions occur (Services), authority/value move (Flows), and truth persists (Stores).
-This repo will expand with schemas, examples, scoring rubrics, diagrams, and test case libraries.
+MIT — see [LICENSE](LICENSE).

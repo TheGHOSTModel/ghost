@@ -1,0 +1,42 @@
+{
+  "event_id": "uuid",
+  "timestamp": "ISO-8601",
+  "source": {
+    "name": "",
+    "type": "",
+    "url": "",
+    "country_anchor": ""
+  },
+  "threat": {
+    "title": "",
+    "description": "",
+    "ghost": {
+      "G": false,
+      "H": false,
+      "O": false,
+      "S": false,
+      "T": false
+    },
+    "category_primary": "",
+    "category_secondary": []
+  },
+  "indicators": {
+    "ip_addresses": [],
+    "domains": [],
+    "urls": [],
+    "hashes": []
+  },
+  "target": {
+    "industry": "gaming",
+    "platform": "",
+    "geo": "Global"
+  },
+  "risk": {
+    "severity": "",
+    "confidence": ""
+  },
+  "ingestion": {
+    "method": "",
+    "raw_link": ""
+  }
+}

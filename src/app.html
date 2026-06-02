@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GHOST · Every player has a ghost.</title>
+<meta name="description" content="GHOST — a multi-layer threat modeling framework that reveals what legacy frameworks cannot see." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@300;400;600;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:        #000000;
+  --navy-deep:   #000000;
+  --navy-light:  #14131D;
+  --navy-lighter:#24232E;
+  --navy-card:   #0F0E18;
+  --teal:        #08F4D6;
+  --teal-dim:    #4AB09E;
+  --teal-deep:   #20716A;
+  --teal-glow:   rgba(8, 244, 214, 0.35);
+  --teal-soft:   rgba(8, 244, 214, 0.10);
+  --white:       #FFFFFF;
+  --off-white:   #E8E8EE;
+  --gray-light:  #C0C0CC;
+  --gray-dim:    #7E7E8C;
+  --gray-deep:   #4A4A56;
+  --red-warn:    #FF4D4D;
+  --red-deep:    #8B1A1A;
+  --red-glow:    rgba(255, 77, 77, 0.45);
+  --amber:       #F0B04A;
+  --green-ok:    #6BCB9E;
+  --g: #4488FF;
+  --h: #FF4444;
+  --o: #FF8C00;
+  --s: #9B59B6;
+  --t: #27AE60;
+  --font-head: 'Overpass', system-ui, sans-serif;
+  --font-body: 'Overpass', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --transition-slow: 1100ms cubic-bezier(0.65, 0, 0.35, 1);
+  --transition-med:  600ms cubic-bezier(0.65, 0, 0.35, 1);
+  --transition-fast: 250ms cubic-bezier(0.65, 0, 0.35, 1);
+  --lens-r: 160px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+  background: var(--navy);
+  color: var(--off-white);
+  font-family: var(--font-body);
+  font-weight: 400;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+body:not(.explored) { overflow: hidden; height: 100vh; }
+body.explored { cursor: auto; }
+/* Iframes must not absorb mouse events until the hero intro is dismissed */
+body:not(.explored) iframe { pointer-events: none; }
+
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: 100;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' /%3E%3CfeColorMatrix values='0 0 0 0 0.05  0 0 0 0 0.05  0 0 0 0 0.07  0 0 0 0.13 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.35;
+  mix-blend-mode: overlay;
+}
+
+/* ── Base ambient layer ─────────────────────────────────────── */
+#ambient-stage {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none;
+  transition: opacity var(--transition-slow), filter var(--transition-slow), height var(--transition-slow);
+}
+body.explored #ambient-stage { opacity: 0; visibility: hidden; }
+
+/* ── Tiles ──── */
+.tile {
+  position: absolute;
+  width: 15rem; height: 15rem;
+  background: rgba(15, 14, 24, 0.7);
+  border: 1px solid var(--navy-lighter);
+  border-radius: 6px; padding: 1rem;
+  overflow: hidden; backdrop-filter: blur(6px);
+}
+.tile-tl { top: 7%; left: 3.5%; }
+.tile-tr { top: 7%; right: 3.5%; }
+.tile-bl { bottom: 7%; left: 3.5%; }
+.tile-br { bottom: 7%; right: 3.5%; }
+@media (max-width: 1280px) { .tile { width: 12rem; height: 12rem; } }
+@media (max-width: 900px)  { .tile { display: none; } }
+.tile-label {
+  font-family: var(--font-mono); font-size: 0.58rem;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--teal); margin-bottom: 0.7rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--green-ok);
+  display: inline-block; margin-right: 0.4em;
+  box-shadow: 0 0 6px rgba(107, 203, 158, 0.5);
+}
+.fig {
+  width: 100%; height: calc(100% - 1.7rem);
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.fig svg { width: 100%; height: 100%; max-height: 100%; display: block; }
+.fig .layer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.fig .layer-default  { opacity: 1; }
+.fig .layer-revealed { opacity: 0; }
+.chat-list { width: 100%; height: calc(100% - 1.7rem); display: flex; flex-direction: column; gap: 0.4rem; overflow: hidden; }
+.chat-bubble { font-family: var(--font-body); font-size: 0.68rem; line-height: 1.35; padding: 0.3rem 0.55rem; border-radius: 10px; max-width: 90%; }
+.chat-bubble.them { background: var(--navy-lighter); color: var(--off-white); border-bottom-left-radius: 3px; align-self: flex-start; }
+.chat-bubble.me   { background: var(--teal-deep); color: var(--off-white); border-bottom-right-radius: 3px; align-self: flex-end; }
+.chat-subscript { font-size: 0.5rem; font-family: var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--red-warn); margin-top: 0.2rem; display: none; }
+
+/* ── Spotlight reveal layer ─────────────────────────────────── */
+#reveal-layer {
+  position: fixed; inset: 0; z-index: 3; pointer-events: none;
+  clip-path: circle(0px at -999px -999px); will-change: clip-path;
+  background: rgba(18, 4, 4, 0.38);
+  transition: opacity var(--transition-slow);
+}
+body.explored #reveal-layer { opacity: 0; visibility: hidden; }
+#reveal-layer .tile { border-color: rgba(255, 77, 77, 0.55); background: rgba(20, 19, 29, 0.95); box-shadow: 0 0 36px rgba(255, 77, 77, 0.18); }
+#reveal-layer .tile-label { color: var(--red-warn); }
+#reveal-layer .status-dot { background: var(--red-warn); box-shadow: 0 0 10px var(--red-glow); animation: dotPulse 1.2s infinite ease-in-out; }
+#reveal-layer .chat-bubble.them { background: rgba(139, 26, 26, 0.55); border: 1px solid var(--red-warn); }
+#reveal-layer .chat-bubble.me   { background: var(--navy-lighter); color: var(--gray-light); opacity: 0.6; }
+#reveal-layer .chat-subscript   { display: block; }
+@keyframes dotPulse { 0%, 100% { box-shadow: 0 0 6px var(--red-glow); } 50% { box-shadow: 0 0 14px var(--red-glow); } }
+.ghost-figurine { position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%); width: clamp(280px, 26vw, 420px); aspect-ratio: 2 / 3; max-height: 70vh; pointer-events: none; }
+.ghost-figurine img { width: 100%; height: 100%; display: block; object-fit: contain; filter: saturate(0.1) brightness(0.82) contrast(1.35) hue-rotate(200deg); }
+.ghost-cyborg-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; mix-blend-mode: screen; }
+
+/* ── Player figurine ──────────────────────────────── */
+.figurine-stage { position: fixed; left: 50%; top: 54%; transform: translate(-50%, -50%); width: clamp(280px, 26vw, 420px); aspect-ratio: 2 / 3; max-height: 70vh; z-index: 2; pointer-events: none; transition: opacity var(--transition-slow), transform var(--transition-slow); }
+body.explored .figurine-stage { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+.figurine-stage::before { content: ""; position: absolute; inset: -8% -12%; background: radial-gradient(ellipse 60% 50% at 50% 38%, rgba(8, 244, 214, 0.18) 0%, rgba(8, 244, 214, 0.06) 35%, transparent 70%); pointer-events: none; z-index: 1; }
+.figurine-stage img { width: 100%; height: 100%; display: block; object-fit: contain; position: relative; z-index: 2; mix-blend-mode: screen; filter: brightness(0.38) contrast(1.1); }
+
+/* ── Lens cursor ─────────────────────────────────── */
+#lens { position: fixed; width: calc(var(--lens-r) * 2); height: calc(var(--lens-r) * 2); border-radius: 50%; pointer-events: none; z-index: 4; transform: translate(-50%, -50%); transition: opacity var(--transition-med); background: radial-gradient(circle at center, transparent 0%, transparent 46%, rgba(8, 244, 214, 0.06) 49%, rgba(8, 244, 214, 0.14) 50%, rgba(8, 244, 214, 0.06) 51%, transparent 54%); box-shadow: inset 0 0 0 1px rgba(8, 244, 214, 0.3), 0 0 60px rgba(8, 244, 214, 0.12), inset 0 0 80px rgba(8, 244, 214, 0.04); }
+body.explored #lens { opacity: 0; visibility: hidden; }
+#lens::before { content: ""; position: absolute; top: 50%; left: 50%; width: 60%; height: 60%; transform: translate(-50%, -50%); border-radius: 50%; border: 1px dashed rgba(8, 244, 214, 0.15); animation: lensRotate 30s linear infinite; }
+@keyframes lensRotate { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+#lens::after { content: ""; position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; transform: translate(-50%, -50%); border-radius: 50%; background: var(--teal); box-shadow: 0 0 12px var(--teal-glow); }
+.lens-label { position: fixed; z-index: 4; pointer-events: none; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--teal); transform: translate(-50%, calc(-50% + var(--lens-r) + 16px)); opacity: 0.85; white-space: nowrap; transition: opacity var(--transition-med); }
+body.explored .lens-label { opacity: 0; visibility: hidden; }
+
+/* ── Hero ─────────────────────────────────────────── */
+.hero { position: fixed; inset: 0; z-index: 5; pointer-events: none; transition: opacity var(--transition-slow), transform var(--transition-slow); }
+body.explored .hero { opacity: 0; transform: translateY(-30px); pointer-events: none; }
+.hero::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 55% 70% at center, rgba(10,9,17,0) 40%, rgba(10,9,17,0.4) 75%, transparent 100%); pointer-events: none; }
+.hero-top { position: absolute; top: 7%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; text-align: center; pointer-events: auto; }
+.hero-bottom { position: absolute; bottom: 7%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: row; align-items: center; gap: 2rem; pointer-events: auto; white-space: nowrap; }
+.hero-eyebrow { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.22em; color: var(--teal); text-transform: uppercase; margin-bottom: 1rem; opacity: 0; animation: fadeUp 1.2s 0.3s forwards ease-out; }
+.hero-dims { display: flex; align-items: flex-start; width: 100%; margin-top: -1.1rem; opacity: 0; animation: fadeUp 1.4s 0.8s forwards ease-out; }
+.hero-dim-tag { flex: 1; font-family: var(--font-mono); font-size: 0.55rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal-dim); text-align: center; }
+.hero-dim-sep { font-size: 0.32em; padding: 0 0.22em; visibility: hidden; user-select: none; }
+.hero-mark-wrap { position: relative; opacity: 0; animation: fadeUp 1.4s 0.5s forwards ease-out, glitch 9s 2s infinite; }
+.hero-mark { position: relative; z-index: 2; font-family: var(--font-head); font-weight: 900; font-size: clamp(4.8rem, 10.5vw, 8.5rem); letter-spacing: 0; color: var(--white); line-height: 1; white-space: nowrap; display: flex; align-items: center; width: 100%; text-shadow: 0 0 60px rgba(8, 244, 214, 0.18), 0 0 120px rgba(8, 244, 214, 0.08); }
+.hero-mark .letter { flex: 1; text-align: center; }
+.hero-mark .sep { color: var(--teal); opacity: 0.85; font-weight: 400; font-size: 0.32em; display: inline-flex; align-items: center; height: 1em; position: relative; top: -0.18em; padding: 0 0.22em; line-height: 1; }
+.hero-mark-shadow { position: absolute; inset: 0; z-index: 1; font-family: var(--font-head); font-weight: 900; font-size: clamp(3.4rem, 9vw, 7rem); letter-spacing: 0.05em; line-height: 0.9; color: transparent; -webkit-text-stroke: 1px rgba(255, 77, 77, 0.3); animation: shadowDrift 8s infinite ease-in-out; pointer-events: none; }
+.hero-mark-shadow .sep { color: transparent; font-size: 0.32em; display: inline-flex; align-items: center; height: 1em; position: relative; top: -0.18em; padding: 0 0.22em; line-height: 1; }
+@keyframes shadowDrift { 0%, 100% { transform: translate(-2px, 1px); opacity: 0.4; } 25% { transform: translate(2px, -1px); opacity: 0.6; } 50% { transform: translate(-1px, 2px); opacity: 0.3; } 75% { transform: translate(1px, -2px); opacity: 0.5; } }
+.hero-mark-wrap::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 3px, rgba(10, 9, 17, 0.20) 3px, rgba(10, 9, 17, 0.20) 4px); pointer-events: none; z-index: 3; mix-blend-mode: multiply; opacity: 0.5; }
+@keyframes glitch { 0%, 96%, 100% { filter: none; transform: translate(0,0); } 96.5% { filter: hue-rotate(15deg) saturate(1.4); transform: translate(-1px,0); } 97% { filter: none; transform: translate(2px,0); } 97.5% { filter: hue-rotate(-10deg); transform: translate(0,1px); } 98% { filter: none; transform: translate(0,0); } }
+.hero-tagline { font-family: var(--font-body); font-weight: 300; font-size: clamp(0.85rem, 1.2vw, 1.05rem); color: var(--gray-light); letter-spacing: 0.01em; line-height: 1.5; font-style: italic; opacity: 0; animation: fadeUp 1.4s 0.8s forwards ease-out; white-space: normal; max-width: 46ch; }
+.hero-tagline em { color: var(--teal); font-style: italic; font-weight: 400; }
+.hero-tagline .red-word { color: var(--red-warn); font-style: italic; font-weight: 500; }
+.explore-btn { position: relative; background: transparent; color: var(--teal); border: 1px solid var(--teal-dim); padding: 0.85rem 2rem; font-family: var(--font-head); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.32em; text-transform: uppercase; cursor: none; overflow: visible; transition: color 350ms ease, border-color 350ms ease, background 350ms ease; opacity: 0; animation: fadeUp 1.4s 1s forwards ease-out; white-space: nowrap; }
+.explore-btn .arrow { display: inline-block; transition: transform 350ms ease; }
+.explore-btn:hover { color: var(--red-warn); border-color: var(--red-warn); background: rgba(255, 77, 77, 0.05); animation: btnTremble 0.2s infinite, fadeUp 1.4s 1s forwards ease-out; }
+@keyframes btnTremble { 0% { transform: translate(0,0); } 20% { transform: translate(-1px, 0.5px); } 40% { transform: translate(0.5px, -0.5px); } 60% { transform: translate(-0.5px, 1px); } 80% { transform: translate(1px, 0); } 100% { transform: translate(0,0); } }
+.explore-btn::before { content: ""; position: absolute; inset: -8px; border: 1px solid transparent; border-radius: 2px; transition: border-color 350ms ease; pointer-events: none; }
+.explore-btn:hover::before { border-color: rgba(255, 77, 77, 0.4); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Compact header ───────────────────────────────── */
+.compact-header { position: fixed; top: 0.75rem; left: 1.5rem; right: 1.5rem; z-index: 10; height: 3.5rem; display: flex; align-items: center; gap: 0; padding: 0 1.2rem; background: rgba(0,0,0,0.92); backdrop-filter: blur(8px); border-radius: 8px; opacity: 0; visibility: hidden; transform: translateY(-100%); transition: opacity var(--transition-slow) 600ms, visibility 0s linear var(--transition-slow), transform var(--transition-slow) 600ms; pointer-events: none; border: 1px solid var(--navy-lighter); }
+body.explored .compact-header { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; transition: opacity var(--transition-slow) 600ms, visibility 0s linear 0s, transform var(--transition-slow) 600ms; }
+.compact-mark { font-family: var(--font-head); font-weight: 900; font-size: 1rem; color: var(--white); letter-spacing: 0.06em; white-space: nowrap; flex-shrink: 0; margin-right: 0.5rem; padding-right: 1rem; border-right: 1px solid var(--navy-lighter); }
+.compact-mark .sep { color: var(--teal); font-size: 0.42em; font-weight: 400; display: inline-flex; align-items: center; height: 1em; position: relative; top: -0.12em; padding: 0 0.18em; line-height: 1; }
+.back-btn { background: transparent; color: var(--gray-dim); border: 1px solid var(--navy-lighter); font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; padding: 0.3rem 0.75rem; cursor: pointer; transition: color var(--transition-fast), border-color var(--transition-fast); white-space: nowrap; flex-shrink: 0; margin-left: 0.5rem; }
+.back-btn:hover { color: var(--teal); border-color: var(--teal-dim); }
+
+/* ── Tabs shell ───────────────────────────────────── */
+.tabs-shell { position: fixed; top: 5.25rem; left: 0; right: 0; bottom: 2.5rem; z-index: 5; padding: 0 2rem; overflow-y: auto; max-width: none; opacity: 0; visibility: hidden; transform: translateY(20px); transition: opacity var(--transition-slow) 700ms, visibility 0s linear var(--transition-slow), transform var(--transition-slow) 700ms; pointer-events: none; display: flex; flex-direction: column; }
+body.explored .tabs-shell { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; transition: opacity var(--transition-slow) 700ms, visibility 0s linear 0s, transform var(--transition-slow) 700ms; }
+.tabs-shell.iframe-active { padding: 0; overflow: hidden; }
+/* tabs-nav is now inside the compact-header — hide the old one */
+.tabs-nav-page { display: none; }
+/* Tab nav inside header */
+.header-tabs { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; flex: 1; }
+.header-tabs::-webkit-scrollbar { display: none; }
+.tab-btn { background: transparent; border: none; color: var(--gray-dim); font-family: var(--font-head); font-weight: 600; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; padding: 0 1.1rem; height: 3.5rem; cursor: pointer; position: relative; transition: color var(--transition-fast); white-space: nowrap; }
+.tab-btn::after { content: ""; position: absolute; left: 1.1rem; right: 1.1rem; bottom: 0; height: 2px; background: var(--teal); transform: scaleX(0); transform-origin: center; transition: transform var(--transition-fast); }
+.tab-btn:hover { color: var(--off-white); }
+.tab-btn.active { color: var(--teal); }
+.tab-btn.active::after { transform: scaleX(1); }
+.tab-btn .tab-num { display: inline-block; font-family: var(--font-mono); font-size: 0.55rem; color: var(--teal-dim); margin-right: 0.5em; opacity: 0.8; }
+.tab-panel { display: none; animation: panelIn 500ms ease-out; overflow-y: auto; }
+.tab-panel.active { display: block; flex: 1; min-height: 0; }
+.tab-panel.active.is-iframe { display: flex; flex-direction: column; overflow: hidden; }
+@keyframes panelIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.panel-eyebrow { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.28em; color: var(--teal); text-transform: uppercase; margin-bottom: 1rem; }
+.panel-title { font-family: var(--font-head); font-weight: 900; font-size: clamp(2rem, 4vw, 3.4rem); color: var(--white); line-height: 1.05; margin-bottom: 1.4rem; max-width: 22ch; }
+.panel-lede { font-size: 1.05rem; font-weight: 300; font-style: italic; color: var(--gray-light); line-height: 1.55; max-width: 60ch; margin-bottom: 3rem; border-left: 2px solid var(--teal); padding-left: 1.2rem; }
+
+footer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; text-align: center; padding: 0.5rem 2rem; border-top: 1px solid var(--navy-lighter); background: rgba(0,0,0,0.92); backdrop-filter: blur(8px); font-family: var(--font-mono); font-size: 0.68rem; color: var(--gray-dim); letter-spacing: 0.08em; opacity: 0; visibility: hidden; transition: opacity var(--transition-slow) 800ms, visibility 0s linear var(--transition-slow); height: 2.5rem; display: flex; align-items: center; justify-content: center; }
+body.explored footer { opacity: 1; visibility: visible; transition: opacity var(--transition-slow) 800ms, visibility 0s linear 0s; }
+footer a { color: var(--teal-dim); text-decoration: none; transition: color var(--transition-fast); }
+footer a:hover { color: var(--teal); }
+
+/* ── Framework tab ─────────────────────────────────────────── */
+.domain-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 3rem; }
+@media (max-width: 900px) { .domain-grid { grid-template-columns: repeat(2, 1fr); } }
+.domain-card { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 6px; padding: 1.4rem; position: relative; overflow: hidden; transition: border-color 250ms, transform 250ms; cursor: default; }
+.domain-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; transition: opacity 250ms; }
+.domain-card:hover { transform: translateY(-2px); }
+.dc-g::before { background: var(--g); }
+.dc-h::before { background: var(--h); }
+.dc-o::before { background: var(--o); }
+.dc-s::before { background: var(--s); }
+.dc-t::before { background: var(--t); }
+.dc-g { border-color: rgba(68,136,255,0.25); }
+.dc-h { border-color: rgba(255,68,68,0.25); }
+.dc-o { border-color: rgba(255,140,0,0.25); }
+.dc-s { border-color: rgba(155,89,182,0.25); }
+.dc-t { border-color: rgba(39,174,96,0.25); }
+.dc-g:hover { border-color: var(--g); }
+.dc-h:hover { border-color: var(--h); }
+.dc-o:hover { border-color: var(--o); }
+.dc-s:hover { border-color: var(--s); }
+.dc-t:hover { border-color: var(--t); }
+.domain-letter { font-family: var(--font-head); font-weight: 900; font-size: 3rem; line-height: 1; margin-bottom: 0.4rem; }
+.dc-g .domain-letter { color: var(--g); text-shadow: 0 0 24px rgba(68,136,255,0.3); }
+.dc-h .domain-letter { color: var(--h); text-shadow: 0 0 24px rgba(255,68,68,0.3); }
+.dc-o .domain-letter { color: var(--o); text-shadow: 0 0 24px rgba(255,140,0,0.3); }
+.dc-s .domain-letter { color: var(--s); text-shadow: 0 0 24px rgba(155,89,182,0.3); }
+.dc-t .domain-letter { color: var(--t); text-shadow: 0 0 24px rgba(39,174,96,0.3); }
+.domain-name { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gray-dim); margin-bottom: 0.8rem; }
+.domain-desc { font-size: 0.82rem; line-height: 1.5; color: var(--gray-light); margin-bottom: 1rem; }
+.domain-count { font-family: var(--font-mono); font-size: 0.58rem; color: var(--gray-dim); }
+
+.surfaces-section { margin-bottom: 3rem; }
+.section-heading { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.24em; color: var(--teal-dim); text-transform: uppercase; margin-bottom: 1.2rem; }
+.surfaces-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; }
+@media (max-width: 700px) { .surfaces-grid { grid-template-columns: repeat(2, 1fr); } }
+.surface-card { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 4px; padding: 1rem; display: flex; gap: 0.8rem; align-items: flex-start; transition: border-color 250ms; }
+.surface-card:hover { border-color: var(--teal-dim); }
+.surface-num { font-family: var(--font-mono); font-size: 1.4rem; font-weight: 600; color: var(--teal); line-height: 1; min-width: 2rem; }
+.surface-info-name { font-weight: 700; font-size: 0.85rem; color: var(--off-white); margin-bottom: 0.3rem; }
+.surface-info-desc { font-size: 0.78rem; color: var(--gray-dim); line-height: 1.4; }
+
+.attack-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 3rem; }
+@media (max-width: 900px) { .attack-grid { grid-template-columns: 1fr; } }
+.attack-card { background: rgba(139,26,26,0.08); border: 1px solid rgba(255,77,77,0.2); border-radius: 6px; padding: 1.4rem; transition: border-color 250ms; }
+.attack-card:hover { border-color: rgba(255,77,77,0.45); }
+.attack-label { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.2em; color: var(--red-warn); text-transform: uppercase; margin-bottom: 0.5rem; }
+.attack-title { font-weight: 700; font-size: 0.95rem; color: var(--white); margin-bottom: 0.7rem; }
+.attack-desc { font-size: 0.8rem; color: var(--gray-dim); line-height: 1.5; margin-bottom: 0.8rem; }
+.attack-chain { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.chain-tag { font-family: var(--font-mono); font-size: 0.6rem; padding: 0.18rem 0.5rem; border-radius: 3px; border: 1px solid; }
+.chain-tag.g { color: var(--g); border-color: rgba(68,136,255,0.4); background: rgba(68,136,255,0.08); }
+.chain-tag.h { color: var(--h); border-color: rgba(255,68,68,0.4); background: rgba(255,68,68,0.08); }
+.chain-tag.o { color: var(--o); border-color: rgba(255,140,0,0.4); background: rgba(255,140,0,0.08); }
+.chain-tag.s { color: var(--s); border-color: rgba(155,89,182,0.4); background: rgba(155,89,182,0.08); }
+.chain-tag.t { color: var(--t); border-color: rgba(39,174,96,0.4); background: rgba(39,174,96,0.08); }
+.chain-arrow { color: var(--gray-deep); font-size: 0.7rem; }
+
+.scale-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--navy-lighter); border: 1px solid var(--navy-lighter); border-radius: 6px; overflow: hidden; margin-bottom: 3rem; }
+.scale-cell { background: var(--navy-light); padding: 1.4rem; text-align: center; }
+.scale-num { font-family: var(--font-mono); font-size: 2rem; font-weight: 600; color: var(--teal); line-height: 1; margin-bottom: 0.4rem; }
+.scale-label { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.18em; color: var(--gray-dim); text-transform: uppercase; }
+@media (max-width: 700px) { .scale-bar { grid-template-columns: repeat(2, 1fr); } }
+
+.tdtm-section { margin-bottom: 2rem; }
+.tdtm-card { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 6px; padding: 1.4rem; margin-bottom: 1rem; }
+.tdtm-title { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.2em; color: var(--teal); text-transform: uppercase; margin-bottom: 0.8rem; }
+.test-row { display: flex; gap: 1rem; margin-bottom: 0.6rem; align-items: flex-start; }
+.test-type { font-family: var(--font-mono); font-size: 0.6rem; color: var(--gray-dim); letter-spacing: 0.12em; text-transform: uppercase; min-width: 6rem; padding-top: 0.1rem; }
+.test-desc { font-size: 0.82rem; color: var(--gray-light); line-height: 1.4; }
+.test-code { font-family: var(--font-mono); font-size: 0.7rem; color: var(--amber); background: rgba(240,176,74,0.08); border: 1px solid rgba(240,176,74,0.2); border-radius: 3px; padding: 0.2rem 0.5rem; display: inline-block; margin-top: 0.3rem; }
+
+/* ── IAT tab ───────────────────────────────────────────────── */
+.iat-filter-bar { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: center; }
+.iat-filter-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.2em; color: var(--gray-dim); text-transform: uppercase; margin-right: 0.5rem; }
+.iat-btn { font-family: var(--font-mono); font-size: 0.65rem; padding: 0.3rem 0.8rem; background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 4px; color: var(--gray-dim); cursor: pointer; transition: all 180ms; letter-spacing: 0.1em; }
+.iat-btn:hover { color: var(--off-white); border-color: var(--gray-dim); }
+.iat-btn.active { background: rgba(8,244,214,0.1); border-color: var(--teal); color: var(--teal); }
+.iat-btn.g-active { background: rgba(68,136,255,0.12); border-color: var(--g); color: var(--g); }
+.iat-btn.h-active { background: rgba(255,68,68,0.12); border-color: var(--h); color: var(--h); }
+.iat-btn.o-active { background: rgba(255,140,0,0.12); border-color: var(--o); color: var(--o); }
+.iat-btn.s-active { background: rgba(155,89,182,0.12); border-color: var(--s); color: var(--s); }
+.iat-btn.t-active { background: rgba(39,174,96,0.12); border-color: var(--t); color: var(--t); }
+
+.iat-table-wrap { overflow-x: auto; margin-bottom: 3rem; }
+.iat-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.iat-table thead tr { border-bottom: 1px solid var(--navy-lighter); }
+.iat-table th { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.18em; color: var(--gray-dim); text-transform: uppercase; text-align: left; padding: 0.6rem 0.8rem; white-space: nowrap; }
+.iat-table tbody tr { border-bottom: 1px solid rgba(30,29,42,0.6); transition: background 150ms; cursor: pointer; }
+.iat-table tbody tr:hover { background: rgba(8,244,214,0.04); }
+.iat-table td { padding: 0.8rem; line-height: 1.4; vertical-align: top; }
+.iat-id { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 600; }
+.iat-id.g { color: var(--g); } .iat-id.h { color: var(--h); } .iat-id.o { color: var(--o); } .iat-id.s { color: var(--s); } .iat-id.t { color: var(--t); }
+.iat-inv { color: var(--off-white); font-size: 0.82rem; }
+.iat-tel { font-family: var(--font-mono); font-size: 0.65rem; color: var(--teal-dim); }
+.iat-threats { font-size: 0.75rem; color: var(--gray-dim); }
+.iat-threat-tag { display: inline-block; background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.2); border-radius: 2px; padding: 0.1rem 0.35rem; margin: 0.1rem 0.2rem 0.1rem 0; font-size: 0.62rem; color: var(--red-warn); font-family: var(--font-mono); white-space: nowrap; }
+.iat-detail-row { display: none; background: var(--navy-card) !important; }
+.iat-detail-row.open { display: table-row; }
+.iat-detail-cell { padding: 0.8rem 1rem 1rem 2rem !important; }
+.iat-schema-block { font-family: var(--font-mono); font-size: 0.68rem; color: var(--amber); background: rgba(240,176,74,0.06); border: 1px solid rgba(240,176,74,0.18); border-radius: 4px; padding: 0.6rem 0.8rem; margin-bottom: 0.6rem; line-height: 1.6; word-break: break-all; }
+.iat-signal { font-size: 0.75rem; color: var(--gray-light); }
+.iat-signal strong { color: var(--teal-dim); font-family: var(--font-mono); font-size: 0.65rem; margin-right: 0.4rem; }
+
+.iat-methodology { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem; }
+@media (max-width: 800px) { .iat-methodology { grid-template-columns: 1fr; } }
+.iat-method-card { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 6px; padding: 1.4rem; }
+.iat-method-title { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.2em; color: var(--teal); text-transform: uppercase; margin-bottom: 0.8rem; }
+.iat-method-body { font-size: 0.82rem; color: var(--gray-light); line-height: 1.55; }
+.iat-method-body .step { display: flex; gap: 0.8rem; margin-bottom: 0.7rem; }
+.iat-method-body .step-num { font-family: var(--font-mono); font-size: 0.65rem; color: var(--teal-dim); min-width: 2rem; padding-top: 0.1rem; }
+.iat-method-body .step-text { font-size: 0.82rem; color: var(--gray-light); line-height: 1.45; }
+
+.risk-formula { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 6px; padding: 1.4rem; margin-bottom: 2rem; }
+.risk-title { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.2em; color: var(--teal); text-transform: uppercase; margin-bottom: 1rem; }
+.risk-eq { font-family: var(--font-mono); font-size: 0.78rem; color: var(--amber); background: rgba(240,176,74,0.06); border: 1px solid rgba(240,176,74,0.2); border-radius: 4px; padding: 0.8rem 1rem; margin-bottom: 1rem; line-height: 1.7; }
+.risk-factors { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.risk-factor { font-family: var(--font-mono); font-size: 0.62rem; padding: 0.25rem 0.6rem; background: rgba(8,244,214,0.06); border: 1px solid rgba(8,244,214,0.18); border-radius: 3px; color: var(--teal-dim); }
+
+/* ── Iframe tabs ───────────────────────────────────────────── */
+.iframe-tab { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 0; }
+.iframe-bar { height: 2rem; display: flex; align-items: center; flex-shrink: 0; padding: 0 0.2rem; gap: 1rem; }
+.iframe-bar-text { font-family: var(--font-mono); font-size: 0.62rem; color: var(--gray-dim); letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.iframe-bar-text em { color: var(--teal-dim); font-style: normal; }
+.iframe-wrap { position: relative; width: 100%; flex: 1; min-height: 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--navy-lighter); }
+.iframe-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; background: #000; display: block; }
+.iframe-notice { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 6px; padding: 0.7rem 1.2rem; margin-bottom: 0.8rem; font-family: var(--font-mono); font-size: 0.68rem; color: var(--gray-dim); display: flex; align-items: center; gap: 0.8rem; flex-shrink: 0; }
+.iframe-notice .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
+[data-tab-panel="livesim"] .iframe-bar { height: 1rem; padding: 0 0.2rem; }
+[data-tab-panel="livesim"] .iframe-bar-text { font-size: 0.55rem; }
+
+/* ── About tab ─────────────────────────────────────────────── */
+
+.about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem; align-items: stretch; }
+.author-card, .about-story { height: 100%; }
+@media (max-width: 800px) { .about-grid { grid-template-columns: 1fr; } }
+.author-card { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 8px; padding: 1.8rem; }
+.author-role { font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.22em; color: var(--teal); text-transform: uppercase; margin-bottom: 0.8rem; }
+.author-name { font-family: var(--font-head); font-weight: 800; font-size: 1.4rem; color: var(--white); margin-bottom: 0.4rem; }
+.author-title { font-size: 0.82rem; color: var(--gray-dim); margin-bottom: 1.4rem; line-height: 1.4; }
+.author-links { display: flex; flex-direction: column; gap: 0.6rem; }
+.author-link { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--gray-light); font-size: 0.82rem; transition: color 200ms; font-family: var(--font-mono); }
+.author-link:hover { color: var(--teal); }
+.author-link .link-label { font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gray-dim); min-width: 3rem; }
+.author-link .link-val { font-size: 0.75rem; }
+.mentor-note { margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid var(--navy-lighter); font-size: 0.75rem; color: var(--gray-dim); line-height: 1.5; }
+.mentor-note strong { color: var(--off-white); }
+
+.about-story { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 8px; padding: 1.8rem; }
+.story-section { margin-bottom: 1.8rem; }
+.story-section:last-child { margin-bottom: 0; }
+.story-heading { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.2em; color: var(--teal-dim); text-transform: uppercase; margin-bottom: 0.8rem; }
+.story-body { font-size: 0.88rem; color: var(--gray-light); line-height: 1.65; }
+.story-body p { margin-bottom: 0.9rem; }
+.story-body p:last-child { margin-bottom: 0; }
+
+.beyond-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.6rem; margin-bottom: 3rem; }
+.beyond-tag { background: var(--navy-light); border: 1px solid var(--navy-lighter); border-radius: 4px; padding: 0.6rem 0.8rem; font-family: var(--font-mono); font-size: 0.65rem; color: var(--gray-dim); text-align: center; letter-spacing: 0.1em; transition: border-color 200ms, color 200ms; }
+.beyond-tag:hover { border-color: var(--teal-dim); color: var(--teal-dim); }
+
+.about-takeaway { background: rgba(8,244,214,0.04); border: 1px solid rgba(8,244,214,0.2); border-radius: 8px; padding: 1.8rem; text-align: center; margin-bottom: 2rem; }
+.takeaway-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.28em; color: var(--teal); text-transform: uppercase; margin-bottom: 1rem; }
+.takeaway-text { font-size: 1.15rem; font-weight: 300; font-style: italic; color: var(--off-white); line-height: 1.6; }
+.takeaway-text strong { color: var(--teal); font-style: normal; font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+@media (hover: none) and (pointer: coarse) {
+  html, body { cursor: auto; }
+  #lens, .lens-label { display: none; }
+  #reveal-layer { display: none; }
+  .tile { pointer-events: auto !important; cursor: pointer; }
+  .tile.tapped { border-color: rgba(255,77,77,0.55); background: rgba(20,19,29,0.92); }
+  .tile.tapped .fig .layer-default  { opacity: 0; }
+  .tile.tapped .fig .layer-revealed { opacity: 1; }
+  .tile.tapped .tile-label { color: var(--red-warn); }
+  .tile.tapped .status-dot { background: var(--red-warn); }
+  .tile.tapped .chat-bubble.them { background: rgba(139,26,26,0.55); border: 1px solid var(--red-warn); }
+  .tile.tapped .chat-bubble.me   { background: var(--navy-lighter); color: var(--gray-light); opacity: 0.6; }
+  .tile.tapped .chat-subscript   { display: block; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     BASE LAYER — ambient tiles
+     ════════════════════════════════════════════════════════════ -->
+<div id="ambient-stage">
+  <!-- TOP-LEFT: Profile -->
+  <div class="tile tile-tl" data-tile>
+    <div class="tile-label"><span><span class="status-dot"></span>profile</span><span>online</span></div>
+    <div class="fig" style="flex-direction:column;gap:0.3rem;">
+      <div class="layer layer-default" style="flex-direction:column;gap:0.3rem;position:relative;">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="max-height:75%;width:100%;">
+          <circle cx="100" cy="100" r="78" fill="rgba(8,244,214,0.06)"/>
+          <circle cx="100" cy="100" r="62" fill="#1C1B26" stroke="#4AB09E" stroke-width="1.5"/>
+          <circle cx="80" cy="92" r="4" fill="#E8E8EE"/><circle cx="120" cy="92" r="4" fill="#E8E8EE"/>
+          <path d="M 78 118 Q 100 132 122 118" fill="none" stroke="#E8E8EE" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="148" cy="142" r="14" fill="#6BCB9E"/>
+          <path d="M 142 142 L 147 147 L 155 138" fill="none" stroke="#0A0911" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--off-white);letter-spacing:0.04em;text-align:center;">john_doe</div>
+      </div>
+      <div class="layer layer-revealed" style="flex-direction:column;gap:0.3rem;">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="max-height:75%;width:100%;">
+          <circle cx="100" cy="100" r="78" fill="rgba(255,77,77,0.08)"/>
+          <circle cx="100" cy="100" r="62" fill="#0A0911" stroke="#FF4D4D" stroke-width="1.5"/>
+          <circle cx="80" cy="92" r="9" fill="#06050C"/><circle cx="120" cy="92" r="9" fill="#06050C"/>
+          <circle cx="80" cy="92" r="2" fill="#FF4D4D"/><circle cx="120" cy="92" r="2" fill="#FF4D4D"/>
+          <line x1="78" y1="118" x2="116" y2="118" stroke="#FF4D4D" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="148" cy="142" r="14" fill="#FF4D4D"/>
+          <text x="148" y="148" font-family="Overpass" font-weight="900" font-size="20" fill="#0A0911" text-anchor="middle">!</text>
+        </svg>
+        <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--off-white);letter-spacing:0.04em;text-align:center;">john_d<span style="color:#FF4D4D;background:rgba(255,77,77,0.22);border:1px solid #FF4D4D;border-radius:2px;padding:0 2px;font-weight:700;">0</span>e</div>
+        <div style="font-family:var(--font-mono);font-size:0.48rem;color:#FF4D4D;letter-spacing:0.16em;text-transform:uppercase;text-align:center;">→ homoglyph substitution</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP-RIGHT: Network -->
+  <div class="tile tile-tr" data-tile>
+    <div class="tile-label"><span><span class="status-dot"></span>community</span><span>healthy</span></div>
+    <div class="fig">
+      <div class="layer layer-default">
+        <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <line x1="60" y1="60" x2="120" y2="80" stroke="#4AB09E" stroke-width="0.8" opacity="0.5"/><line x1="120" y1="80" x2="180" y2="55" stroke="#4AB09E" stroke-width="0.8" opacity="0.5"/><line x1="120" y1="80" x2="100" y2="140" stroke="#4AB09E" stroke-width="0.8" opacity="0.5"/><line x1="100" y1="140" x2="180" y2="150" stroke="#4AB09E" stroke-width="0.8" opacity="0.5"/><line x1="60" y1="60" x2="100" y2="140" stroke="#4AB09E" stroke-width="0.8" opacity="0.5"/>
+          <circle cx="60" cy="60" r="7" fill="#08F4D6"/><circle cx="120" cy="80" r="9" fill="#08F4D6"/><circle cx="180" cy="55" r="6" fill="#08F4D6"/><circle cx="100" cy="140" r="8" fill="#08F4D6"/><circle cx="180" cy="150" r="7" fill="#08F4D6"/>
+        </svg>
+      </div>
+      <div class="layer layer-revealed">
+        <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="120" cy="100" r="18" fill="#8B1A1A" stroke="#FF4D4D" stroke-width="1.5"/>
+          <path d="M 113 95 L 127 105 M 127 95 L 113 105" stroke="#FF4D4D" stroke-width="1.6" stroke-linecap="round"/>
+          <line x1="120" y1="100" x2="120" y2="30" stroke="#FF4D4D" stroke-width="1.2" opacity="0.8"/><line x1="120" y1="100" x2="170" y2="50" stroke="#FF4D4D" stroke-width="1.2" opacity="0.8"/><line x1="120" y1="100" x2="190" y2="100" stroke="#FF4D4D" stroke-width="1.2" opacity="0.8"/><line x1="120" y1="100" x2="170" y2="150" stroke="#FF4D4D" stroke-width="1.2" opacity="0.8"/><line x1="120" y1="100" x2="70" y2="150" stroke="#FF4D4D" stroke-width="1.2" opacity="0.8"/><line x1="120" y1="100" x2="50" y2="100" stroke="#FF4D4D" stroke-width="1.2" opacity="0.8"/>
+          <circle cx="120" cy="30" r="6" fill="#FF4D4D"/><circle cx="170" cy="50" r="6" fill="#FF4D4D"/><circle cx="190" cy="100" r="6" fill="#FF4D4D"/><circle cx="170" cy="150" r="6" fill="#FF4D4D"/><circle cx="70" cy="150" r="6" fill="#FF4D4D"/><circle cx="50" cy="100" r="6" fill="#FF4D4D"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM-LEFT: Chat -->
+  <div class="tile tile-bl" data-tile>
+    <div class="tile-label"><span><span class="status-dot"></span>direct messages</span><span>2m ago</span></div>
+    <div class="chat-list">
+      <div class="chat-bubble them">hey 👋 you new here?<div class="chat-subscript">→ age probe</div></div>
+      <div class="chat-bubble me">yeah, just turned 11 :)</div>
+      <div class="chat-bubble them">cool 😊 want to be friends? got discord?<div class="chat-subscript">→ off-platform pull</div></div>
+      <div class="chat-bubble them">don't tell ur parents 🤫<div class="chat-subscript">→ isolation tactic</div></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM-RIGHT: Trust Handshake -->
+  <div class="tile tile-br" data-tile>
+    <div class="tile-label"><span><span class="status-dot"></span>trust handshake</span><span>established</span></div>
+    <div class="fig">
+      <div class="layer layer-default">
+        <svg viewBox="0 0 240 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="60" cy="55" r="16" fill="#08F4D6" opacity="0.85"/><path d="M 35 110 Q 60 75 85 110 L 85 130 L 35 130 Z" fill="#08F4D6" opacity="0.85"/>
+          <circle cx="180" cy="55" r="16" fill="#08F4D6" opacity="0.85"/><path d="M 155 110 Q 180 75 205 110 L 205 130 L 155 130 Z" fill="#08F4D6" opacity="0.85"/>
+          <line x1="85" y1="120" x2="155" y2="120" stroke="#08F4D6" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="120" cy="120" r="5" fill="#08F4D6"/>
+        </svg>
+      </div>
+      <div class="layer layer-revealed">
+        <svg viewBox="0 0 240 180" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="60" cy="62" r="13" fill="#E8E8EE"/><path d="M 40 115 Q 60 84 80 115 L 80 132 L 40 132 Z" fill="#E8E8EE"/>
+          <circle cx="180" cy="50" r="17" fill="#06050C" stroke="#FF4D4D" stroke-width="1.5"/><path d="M 153 110 Q 180 72 207 110 L 207 130 L 153 130 Z" fill="#06050C" stroke="#FF4D4D" stroke-width="1.5"/>
+          <path d="M 160 115 C 130 115, 110 122, 80 120" fill="none" stroke="#FF4D4D" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="80" cy="120" r="5" fill="#FF4D4D"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PLAYER FIGURINE -->
+<div class="figurine-stage" id="figurine-stage">
+  <img src="gamer-player.png" alt="Player" />
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     SPOTLIGHT REVEAL LAYER
+     ════════════════════════════════════════════════════════════ -->
+<div id="reveal-layer">
+  <!-- TOP-LEFT: Profile (threat) -->
+  <div class="tile tile-tl">
+    <div class="tile-label"><span><span class="status-dot"></span>profile</span><span>online</span></div>
+    <div class="fig" style="flex-direction:column;gap:0.3rem;">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="max-height:75%;width:100%;">
+        <circle cx="100" cy="100" r="78" fill="rgba(255,77,77,0.08)"/>
+        <circle cx="100" cy="100" r="62" fill="#1C1B26" stroke="#FF4D4D" stroke-width="1.5"/>
+        <circle cx="80" cy="92" r="4" fill="#FF4D4D"/><circle cx="120" cy="92" r="4" fill="#FF4D4D"/>
+        <path d="M 78 118 Q 100 104 122 118" fill="none" stroke="#FF4D4D" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="148" cy="142" r="14" fill="#FF4D4D"/>
+        <line x1="142" y1="136" x2="154" y2="148" stroke="#1C1B26" stroke-width="2.5" stroke-linecap="round"/><line x1="154" y1="136" x2="142" y2="148" stroke="#1C1B26" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--off-white);letter-spacing:0.04em;text-align:center;">john_d<span style="color:#FF4D4D;background:rgba(255,77,77,0.22);border:1px solid #FF4D4D;border-radius:2px;padding:0 2px;font-weight:700;">0</span>e</div>
+      <div style="font-family:var(--font-mono);font-size:0.48rem;color:#FF4D4D;letter-spacing:0.16em;text-transform:uppercase;text-align:center;">→ homoglyph substitution</div>
+    </div>
+  </div>
+  <!-- TOP-RIGHT: Network (threat) -->
+  <div class="tile tile-tr">
+    <div class="tile-label"><span><span class="status-dot"></span>community</span><span>suspicious</span></div>
+    <div class="fig" style="flex-direction:column;gap:0.4rem;justify-content:center;">
+      <svg viewBox="0 0 240 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:100%;max-height:78%;">
+        <circle cx="120" cy="80" r="11" fill="#8B1A1A" stroke="#FF4D4D" stroke-width="1.4"/>
+        <path d="M 113 76 L 127 84 M 127 76 L 113 84" stroke="#FF4D4D" stroke-width="1.4" stroke-linecap="round"/>
+        <line x1="120" y1="80" x2="120" y2="22" stroke="#FF4D4D" stroke-width="1" opacity="0.85"/><line x1="120" y1="80" x2="168" y2="38" stroke="#FF4D4D" stroke-width="1" opacity="0.85"/><line x1="120" y1="80" x2="192" y2="80" stroke="#FF4D4D" stroke-width="1" opacity="0.85"/><line x1="120" y1="80" x2="168" y2="122" stroke="#FF4D4D" stroke-width="1" opacity="0.85"/><line x1="120" y1="80" x2="72" y2="122" stroke="#FF4D4D" stroke-width="1" opacity="0.85"/><line x1="120" y1="80" x2="48" y2="80" stroke="#FF4D4D" stroke-width="1" opacity="0.85"/>
+        <circle cx="120" cy="22" r="5.5" fill="#FF4D4D"/><circle cx="168" cy="38" r="5.5" fill="#FF4D4D"/><circle cx="192" cy="80" r="5.5" fill="#FF4D4D"/><circle cx="168" cy="122" r="5.5" fill="#FF4D4D"/><circle cx="72" cy="122" r="5.5" fill="#FF4D4D"/><circle cx="48" cy="80" r="5.5" fill="#FF4D4D"/>
+      </svg>
+      <div style="font-family:var(--font-mono);font-size:0.5rem;color:#FF4D4D;letter-spacing:0.18em;text-transform:uppercase;text-align:center;width:100%;">→ inauthentic coordinated behaviour</div>
+    </div>
+  </div>
+  <!-- BOTTOM-LEFT: Chat (threat) -->
+  <div class="tile tile-bl">
+    <div class="tile-label"><span><span class="status-dot"></span>direct messages</span><span>2m ago</span></div>
+    <div class="chat-list">
+      <div class="chat-bubble them">hey 👋 you new here?<div class="chat-subscript">→ age probe</div></div>
+      <div class="chat-bubble me">yeah, just turned 11 :)</div>
+      <div class="chat-bubble them">cool 😊 want to be friends? got discord?<div class="chat-subscript">→ off-platform pull</div></div>
+      <div class="chat-bubble them">don't tell ur parents 🤫<div class="chat-subscript">→ isolation tactic</div></div>
+    </div>
+  </div>
+  <!-- BOTTOM-RIGHT: Trust Handshake (threat) -->
+  <div class="tile tile-br">
+    <div class="tile-label"><span><span class="status-dot"></span>trust handshake</span><span>compromised</span></div>
+    <div class="fig" style="flex-direction:column;gap:0.4rem;justify-content:center;">
+      <svg viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:100%;max-height:68%;">
+        <circle cx="42" cy="38" r="13" fill="#E8E8EE" opacity="0.85"/><path d="M 22 80 Q 42 58 62 80 L 62 96 L 22 96 Z" fill="#E8E8EE" opacity="0.75"/>
+        <path d="M 68 70 C 100 40, 140 40, 170 70" fill="none" stroke="#FF4D4D" stroke-width="1.6" stroke-dasharray="5 3" opacity="0.8"/>
+        <rect x="109" y="34" width="22" height="16" rx="2" fill="#8B1A1A" stroke="#FF4D4D" stroke-width="1"/><text x="120" y="64" font-family="JetBrains Mono,monospace" font-size="6.5" fill="#FF4D4D" text-anchor="middle" letter-spacing="0.5">reward bait</text>
+        <circle cx="196" cy="38" r="14" fill="#06050C" stroke="#FF4D4D" stroke-width="1.5"/>
+        <path d="M 175 80 Q 196 60 217 80 L 217 96 L 175 96 Z" fill="#06050C" stroke="#FF4D4D" stroke-width="1.2"/>
+      </svg>
+      <div style="font-family:var(--font-mono);font-size:0.5rem;color:#FF4D4D;letter-spacing:0.18em;text-transform:uppercase;">→ manufactured trust</div>
+    </div>
+  </div>
+
+  <!-- Ghost figurine -->
+  <div class="ghost-figurine">
+    <img src="gamer-ghost.png" alt="Ghost" />
+    <svg class="ghost-cyborg-overlay" viewBox="0 0 420 630" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <filter id="cglow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="cglow-strong" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <clipPath id="suit-clip"><rect x="80" y="60" width="260" height="560"/></clipPath>
+      </defs>
+      <rect x="145" y="92" width="130" height="28" rx="6" fill="none" stroke="#08F4D6" stroke-width="1.2" opacity="0.7" filter="url(#cglow)"/>
+      <rect x="150" y="96" width="120" height="18" rx="4" fill="#08F4D6" opacity="0.12"/>
+      <circle cx="210" cy="106" r="5" fill="#08F4D6" opacity="0.9" filter="url(#cglow)"><animate attributeName="opacity" values="0.9;0.3;0.9" dur="2.4s" repeatCount="indefinite"/></circle>
+      <path d="M 160 148 L 148 200 L 160 248 L 210 258 L 260 248 L 272 200 L 260 148 Z" fill="none" stroke="#08F4D6" stroke-width="1" opacity="0.55" filter="url(#cglow)"/>
+      <circle cx="210" cy="202" r="18" fill="#08F4D6" opacity="0.1" stroke="#08F4D6" stroke-width="1.4" filter="url(#cglow-strong)"/>
+      <circle cx="210" cy="202" r="5.5" fill="#08F4D6" opacity="0.9" filter="url(#cglow-strong)"><animate attributeName="r" values="5.5;7;5.5" dur="3s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0.5;0.9" dur="3s" repeatCount="indefinite"/></circle>
+      <circle cx="140" cy="170" r="14" fill="none" stroke="#08F4D6" stroke-width="1.2" opacity="0.6" filter="url(#cglow)"/>
+      <circle cx="280" cy="170" r="14" fill="none" stroke="#08F4D6" stroke-width="1.2" opacity="0.6" filter="url(#cglow)"/>
+      <circle cx="210" cy="336" r="3" fill="#08F4D6" opacity="0.85"><animate attributeName="opacity" values="0.85;0.3;0.85" dur="2s" repeatCount="indefinite"/></circle>
+      <rect clip-path="url(#suit-clip)" x="80" y="60" width="260" height="4" fill="#08F4D6" opacity="0.12"><animateTransform attributeName="transform" type="translate" from="0,0" to="0,560" dur="4s" repeatCount="indefinite"/></rect>
+    </svg>
+  </div>
+</div>
+
+<!-- LENS CURSOR -->
+<div id="lens"></div>
+<div class="lens-label" id="lens-label">GHOST · LENS</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     HERO
+     ════════════════════════════════════════════════════════════ -->
+<section class="hero" id="hero">
+  <div class="hero-top">
+    <div class="hero-eyebrow">Threats that live between systems</div>
+    <div class="hero-mark-wrap">
+      <h1 class="hero-mark">
+        <span class="letter">G</span><span class="sep">·</span><span class="letter">H</span><span class="sep">·</span><span class="letter">O</span><span class="sep">·</span><span class="letter">S</span><span class="sep">·</span><span class="letter">T</span>
+      </h1>
+      <div class="hero-mark-shadow" aria-hidden="true">
+        <span class="letter">G</span><span class="sep">·</span><span class="letter">H</span><span class="sep">·</span><span class="letter">O</span><span class="sep">·</span><span class="letter">S</span><span class="sep">·</span><span class="letter">T</span>
+      </div>
+      <div class="hero-dims">
+        <span class="hero-dim-tag">{Gameplay}</span><span class="hero-dim-sep">·</span><span class="hero-dim-tag">&nbsp;{Harm}</span><span class="hero-dim-sep">·</span><span class="hero-dim-tag">&nbsp;&nbsp;&nbsp;{Operations}</span><span class="hero-dim-sep">·</span><span class="hero-dim-tag">&nbsp;&nbsp;&nbsp;{Social}</span><span class="hero-dim-sep">·</span><span class="hero-dim-tag">&nbsp;&nbsp;{Trade}</span>
+      </div>
+    </div>
+  </div>
+  <div class="hero-bottom">
+    <p class="hero-tagline">
+      Most threats don't break a system — they <em>pass through</em> it,
+      hidden in legitimate activity. <span class="red-word">You won't see them without the right lens.</span>
+    </p>
+    <button class="explore-btn" id="explore-btn" aria-label="Enter the GHOST framework">
+      Explore <span class="arrow">→</span>
+    </button>
+  </div>
+</section>
+
+<div class="compact-header">
+  <div class="compact-mark">G<span class="sep">·</span>H<span class="sep">·</span>O<span class="sep">·</span>S<span class="sep">·</span>T</div>
+  <nav class="header-tabs" role="tablist">
+    <button class="tab-btn active" role="tab" data-tab="framework"><span class="tab-num">01</span>Framework</button>
+    <button class="tab-btn" role="tab" data-tab="iat"><span class="tab-num">02</span>Invariants</button>
+    <button class="tab-btn" role="tab" data-tab="livesim"><span class="tab-num">03</span>Live Sim</button>
+    <button class="tab-btn" role="tab" data-tab="radar"><span class="tab-num">04</span>Threat Radar</button>
+    <button class="tab-btn" role="tab" data-tab="about"><span class="tab-num">05</span>About</button>
+  </nav>
+  <button class="back-btn" id="back-btn" aria-label="Return to intro">← Intro</button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     TABS
+     ════════════════════════════════════════════════════════════ -->
+<section class="tabs-shell">
+
+  <!-- ══════════════════════════════════════════════════════════
+       TAB 01 — FRAMEWORK
+       ══════════════════════════════════════════════════════════ -->
+  <div class="tab-panel is-iframe active" data-tab-panel="framework">
+    <div class="iframe-tab">
+      <div class="iframe-bar">
+        <span class="iframe-bar-text">Five domains · Six surfaces · Zero assumptions — threats emerge not from broken code but from legitimate interactions that cross domain boundaries undetected · <em>G · H · O · S · T</em></span>
+      </div>
+      <div class="iframe-wrap">
+        <iframe id="iat-frame" src="iat.html#framework" title="GHOST Framework" scrolling="yes"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       TAB 02 — IAT
+       ══════════════════════════════════════════════════════════ -->
+  <div class="tab-panel is-iframe" data-tab-panel="iat">
+    <div class="iframe-tab">
+      <div class="iframe-bar">
+        <span class="iframe-bar-text">50 invariants · 5 domains · 150 TDTM tests — each invariant anchored to observable telemetry and a detection signal · <em>G · H · O · S · T</em></span>
+      </div>
+      <div class="iframe-wrap">
+        <iframe id="iat-catalog-frame" src="iat.html#catalog" title="GHOST Invariants Catalog" scrolling="yes"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       TAB 03 — LIVE SIM
+       ══════════════════════════════════════════════════════════ -->
+  <div class="tab-panel is-iframe" data-tab-panel="livesim">
+    <div class="iframe-tab">
+      <div class="iframe-bar">
+        <span class="iframe-bar-text">A lightweight harness to simulate player behavior, validate invariants, and detect harm in real time using GHOST AI.</span>
+      </div>
+      <div class="iframe-wrap">
+        <iframe src="http://localhost:8080/" title="GHOSTv2 Live Simulation" allow="cross-origin-isolated" scrolling="no"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       TAB 04 — THREAT RADAR
+       ══════════════════════════════════════════════════════════ -->
+  <div class="tab-panel is-iframe" data-tab-panel="radar">
+    <div class="iframe-tab">
+      <div class="iframe-bar">
+        <span class="iframe-bar-text">Live GHOST Intelligence Radar — real-world threat feeds classified against <em>G · H · O · S · T</em> domains and plotted in real time · refreshes every 4 hours</span>
+      </div>
+      <div class="iframe-wrap">
+        <iframe src="http://localhost:8081/" title="Global Threat Radar" scrolling="no"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       TAB 05 — ABOUT
+       ══════════════════════════════════════════════════════════ -->
+  <div class="tab-panel" data-tab-panel="about">
+    <div class="iframe-bar" style="margin-bottom:1.5rem;">
+      <span class="iframe-bar-text">Threats shift constantly — <em>what they target rarely does</em> · GHOST is an open framework · theghostmodel.com</span>
+    </div>
+
+    <div class="about-grid">
+      <!-- Author card -->
+      <div class="author-card">
+        <div class="author-role">Framework Author</div>
+        <div class="author-name">Harikrishnan Santhanaraghavan</div>
+        <div class="author-links">
+          <a href="https://theghostmodel.com" target="_blank" rel="noopener" class="author-link">
+            <span class="link-label">Web</span><span class="link-val">theghostmodel.com</span>
+          </a>
+          <a href="https://github.com/theGHOSTmodel/ghost" target="_blank" rel="noopener" class="author-link">
+            <span class="link-label">Git</span><span class="link-val">github.com/theGHOSTmodel/ghost</span>
+          </a>
+          <a href="https://linkedin.com/in/harikrishnanss" target="_blank" rel="noopener" class="author-link">
+            <span class="link-label">Contact</span><span class="link-val">linkedin.com/in/harikrishnanss</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Story -->
+      <div class="about-story">
+        <div class="story-section">
+          <div class="story-heading">Why GHOST exists</div>
+          <div class="story-body">
+            <p>Established frameworks surface vulnerabilities in code — they ask: <em>what is broken?</em> In gaming platforms, the most dangerous threats need nothing broken. A grooming attack, a coordinated load, an impersonation — all use the platform exactly as designed.</p>
+            <p>GHOST asks a different question: <em>what if nothing needs to be broken for an attack to succeed?</em></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Beyond gaming -->
+    <div style="background:var(--navy-light);border:1px solid var(--navy-lighter);border-radius:8px;padding:1.4rem 1.8rem;margin-bottom:1.2rem;display:flex;align-items:baseline;gap:1.8rem;flex-wrap:wrap;">
+      <span style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--teal-dim);white-space:nowrap;">Beyond gaming</span>
+      <span style="font-size:0.88rem;color:var(--gray-dim);line-height:1.55;">GHOST was built for games — but the invariants generalise anywhere users interact, trade, and build trust with strangers under platform rules. The same five domains appear in every digital social system.</span>
+    </div>
+    <div class="beyond-grid">
+      <div class="beyond-tag">Social Networks</div>
+      <div class="beyond-tag">Marketplaces</div>
+      <div class="beyond-tag">Fintech Apps</div>
+      <div class="beyond-tag">Dating Platforms</div>
+      <div class="beyond-tag">Gig Economy</div>
+      <div class="beyond-tag">Content Platforms</div>
+      <div class="beyond-tag">Online Gaming</div>
+      <div class="beyond-tag">EdTech</div>
+    </div>
+
+    <!-- Takeaway -->
+    <div class="about-takeaway">
+      <div class="takeaway-label">Take it with you</div>
+      <div class="takeaway-text">The framework is open. The model is public.</div>
+    </div>
+  </div>
+
+</section>
+
+<footer>
+  G·H·O·S·T &nbsp;·&nbsp; <a href="https://theghostmodel.com" target="_blank" rel="noopener">theghostmodel.com</a> &nbsp;·&nbsp;
+  <a href="https://github.com/TheGHOSTModel" target="_blank" rel="noopener">github</a> &nbsp;·&nbsp;
+  <a href="https://linkedin.com/in/harikrishnanss" target="_blank" rel="noopener">linkedin</a>
+</footer>
+
+<script>
+(() => {
+'use strict';
+
+// ── IAT data ──────────────────────────────────────────────────────────────────
+const IAT_DATA = [
+  // Gameplay
+  { id:'G01', domain:'G', inv:'Game state transitions are server-validated before each state change', tel:'server_validated_action', schema:'{ player_id, action, server_state_hash, validation_outcome, ts }', signal:'validation_outcome == "rejected" rate > threshold → cheat attempt', threats:['Client-side state manipulation','Speed hack bypass','Server desync exploit'] },
+  { id:'G02', domain:'G', inv:'Player action inputs conform to game schema before processing', tel:'schema_validation_event', schema:'{ player_id, action_type, payload_hash, valid, ts }', signal:'valid == false burst from single player_id → injection attempt', threats:['Malformed action injection','Protocol fuzzing','Invalid state forcing'] },
+  { id:'G03', domain:'G', inv:'Player session is continuously authenticated end-to-end', tel:'session_continuity_check', schema:'{ session_id, player_id, auth_token_valid, re_auth_required, ts }', signal:'auth_token_valid == false mid-session → session hijack', threats:['Session token theft','Replay attack','Mid-session hijack'] },
+  { id:'G04', domain:'G', inv:'Economy transactions are atomic and fully logged', tel:'economy_transaction', schema:'{ tx_id, player_id, item_id, delta, balance_before, balance_after, ts }', signal:'balance_after != balance_before + delta → duplication exploit', threats:['Transaction rollback exploit','Duplication glitch','Race condition abuse'] },
+  { id:'G05', domain:'G', inv:'Matchmaking inputs are manipulation-resistant', tel:'matchmaking_request', schema:'{ player_id, mmr, region, queue_type, accepted, ts }', signal:'accepted == false anomaly pattern for mmr range → smurf detection', threats:['MMR manipulation','Smurf account placement','Rank boosting service'] },
+  { id:'G06', domain:'G', inv:'Progression events derive exclusively from validated gameplay', tel:'progression_event', schema:'{ player_id, event_type, xp_delta, source_validated, ts }', signal:'source_validated == false → illegitimate XP farming', threats:['XP farming bot','Progression exploit','Artificial milestone trigger'] },
+  { id:'G07', domain:'G', inv:'Content served to players is integrity-verified before delivery', tel:'content_delivery_check', schema:'{ player_id, asset_id, checksum_valid, ts }', signal:'checksum_valid == false → tampered asset delivery', threats:['Asset injection','Malicious mod delivery','Client-side content swap'] },
+  { id:'G08', domain:'G', inv:'Game rules are enforced uniformly regardless of client version', tel:'rule_enforcement_event', schema:'{ player_id, rule_id, client_version, enforced, ts }', signal:'enforced == false for specific client_version → client exploitation window', threats:['Old client rule bypass','Version-specific cheat','Downgrade attack'] },
+  { id:'G09', domain:'G', inv:'Anti-cheat telemetry is emitted on every anomalous action', tel:'anticheat_signal', schema:'{ player_id, signal_type, confidence_score, action_ref, ts }', signal:'confidence_score > 0.8 sustained → automated enforcement', threats:['Aimbot detection evasion','Speed hack','Wallhack'] },
+  { id:'G10', domain:'G', inv:'Policy state is version-controlled and fully auditable', tel:'policy_audit_event', schema:'{ policy_id, version, change_type, changed_by, ts }', signal:'change_type == "delete" without approval_ref → unauthorized policy removal', threats:['Policy rollback attack','Undocumented rule change','Governance drift'] },
+
+  // Harm
+  { id:'H01', domain:'H', inv:'Age-gated content is restricted by verified age bracket', tel:'age_gate_check', schema:'{ player_id, content_id, age_bracket, access_granted, ts }', signal:'access_granted == true with unverified age_bracket → age gate bypass', threats:['Underage exposure to adult content','Age verification circumvention','Parental control bypass'] },
+  { id:'H02', domain:'H', inv:'Harmful language is intercepted before message delivery', tel:'message_moderation_event', schema:'{ message_id, sender_id, classifier_result, action, ts }', signal:'action == "delivered" with classifier_result == "harmful" → filter bypass', threats:['Hate speech propagation','Slur evasion via leetspeak','Coordinated harassment campaign'] },
+  { id:'H03', domain:'H', inv:'Cross-age interaction rates are monitored and rate-limited', tel:'age_gated_interaction', schema:'{ actor_player_id, target_player_id, target_age_bracket, action, ts }', signal:'adult→minor interaction count > threshold in window → grooming signal', threats:['Grooming initiation','Age-targeted solicitation','Trust building with minor'] },
+  { id:'H04', domain:'H', inv:'Grooming pattern sequences are detectable across session boundaries', tel:'cross_session_pattern', schema:'{ actor_id, target_id, pattern_type, session_count, confidence, ts }', signal:'pattern_type == "grooming" confidence > 0.7 across 3+ sessions → escalation', threats:['Multi-session grooming','Long-term trust building','Off-platform migration attempt'] },
+  { id:'H05', domain:'H', inv:'Real-world trade solicitation is blocked in player chat', tel:'solicitation_detection', schema:'{ message_id, sender_id, solicitation_type, blocked, ts }', signal:'solicitation_type in ["real_money","personal_info"] AND blocked == false → evasion', threats:['Real-money trade (RMT)','Personal info harvesting','External platform lure'] },
+  { id:'H06', domain:'H', inv:'Personal information request patterns are flagged', tel:'pii_request_flag', schema:'{ actor_id, target_id, request_type, flagged, ts }', signal:'request_type == "pii" flagged == false → data harvesting undetected', threats:['Identity data collection','Location fishing','Contact detail extraction'] },
+  { id:'H07', domain:'H', inv:'Self-harm signals trigger escalation workflow', tel:'safeguarding_signal', schema:'{ player_id, signal_type, confidence, escalated, ts }', signal:'signal_type == "self_harm" escalated == false → missed safeguarding event', threats:['Crisis message sent to void','Suicidal ideation undetected','Platform liability exposure'] },
+  { id:'H08', domain:'H', inv:'Coordinated harassment is attributable across account clusters', tel:'harassment_cluster_event', schema:'{ cluster_id, actor_ids[], target_id, pattern_score, ts }', signal:'pattern_score > 0.8 cluster_size > 3 → coordinated attack confirmed', threats:['Multi-account pile-on','Targeted harassment campaign','Brigading'] },
+  { id:'H09', domain:'H', inv:'Radicalization content signals trigger content review', tel:'radicalization_signal', schema:'{ content_id, player_id, classifier_label, review_queued, ts }', signal:'classifier_label == "extremist" review_queued == false → review gap', threats:['Extremist recruitment','Radicalization funnel','In-game propaganda'] },
+  { id:'H10', domain:'H', inv:'Adult-to-minor contact requests are logged and reviewable', tel:'contact_request_log', schema:'{ requester_id, requester_age_bracket, target_id, target_age_bracket, action, ts }', signal:'requester_age_bracket == "adult" target_age_bracket == "minor" → mandatory review', threats:['Contact initiation logging gap','Minor access by adult','Review queue bypass'] },
+
+  // Operations
+  { id:'O01', domain:'O', inv:'Platform availability SLAs hold under volumetric attack conditions', tel:'availability_sla_event', schema:'{ region, current_rps, sla_rps, degraded, ts }', signal:'degraded == true duration > SLA_threshold → SLA breach confirmed', threats:['DDoS attack','Amplification attack','Volumetric flood'] },
+  { id:'O02', domain:'O', inv:'API calls are rate-limited per authenticated identity', tel:'api_rate_event', schema:'{ client_id, endpoint, window_count, threshold, action_taken, ts }', signal:'action_taken == "none" AND window_count > threshold → rate limit bypass', threats:['API scraping','Credential stuffing via API','Automated data exfiltration'] },
+  { id:'O03', domain:'O', inv:'Services degrade gracefully before failing under sustained load', tel:'graceful_degradation_event', schema:'{ service_id, load_pct, degraded, circuit_open, ts }', signal:'circuit_open == false AND load_pct > 95 → no circuit breaker triggered', threats:['Cascade failure','Single point of failure exploitation','Load-induced outage'] },
+  { id:'O04', domain:'O', inv:'Infrastructure configuration drift is detected automatically', tel:'config_drift_event', schema:'{ resource_id, expected_hash, actual_hash, drift_detected, ts }', signal:'drift_detected == true remediation_triggered == false → unmanaged drift', threats:['Unauthorized config change','Shadow IT resource','Security misconfiguration'] },
+  { id:'O05', domain:'O', inv:'Dependency CVEs are tracked and patched within defined SLA', tel:'cve_tracking_event', schema:'{ dependency_id, cve_id, severity, patch_available, patched, days_open, ts }', signal:'severity == "critical" days_open > SLA_days AND patched == false → breach', threats:['Known CVE exploitation','Supply chain attack','Unpatched vulnerability'] },
+  { id:'O06', domain:'O', inv:'Network traffic anomalies trigger automated alerting', tel:'traffic_anomaly_event', schema:'{ source_ip, destination, bytes_per_sec, baseline_bytes_per_sec, alerted, ts }', signal:'bytes_per_sec > 3x baseline AND alerted == false → detection gap', threats:['C2 beaconing','Data exfiltration','Lateral movement'] },
+  { id:'O07', domain:'O', inv:'Bot and automated access is distinguishable from human traffic', tel:'bot_detection_event', schema:'{ session_id, player_id, bot_score, action_taken, ts }', signal:'bot_score > 0.9 action_taken == "none" → unmitigated bot', threats:['Game bot farming','Review bombing bot','Credential stuffing bot'] },
+  { id:'O08', domain:'O', inv:'Credential stuffing attempts are rate-limited and alerted', tel:'credential_attack_event', schema:'{ source_ip, target_accounts, attempts, blocked, alerted, ts }', signal:'blocked == false AND attempts > 50/min → stuffing unmitigated', threats:['Account takeover via stuffing','Brute force login','Combolist attack'] },
+  { id:'O09', domain:'O', inv:'DDoS mitigation activates within defined time threshold', tel:'ddos_mitigation_event', schema:'{ attack_id, detected_at, mitigation_started_at, time_to_mitigate_secs, ts }', signal:'time_to_mitigate_secs > threshold → mitigation SLA missed', threats:['DDoS sustained beyond SLA','Mitigation bypass','Volumetric exhaustion'] },
+  { id:'O10', domain:'O', inv:'Audit logs are immutable and replicated to offline storage', tel:'audit_log_integrity_check', schema:'{ log_batch_id, hash_verified, replica_confirmed, ts }', signal:'hash_verified == false OR replica_confirmed == false → log tampering risk', threats:['Log deletion post-breach','Audit trail falsification','Forensic evidence destruction'] },
+
+  // Social
+  { id:'S01', domain:'S', inv:'Player handles are unique and impersonation-resistant', tel:'identity_create_or_rename', schema:'{ player_id, handle, similarity_to_existing, decision, ts }', signal:'similarity_to_existing > 0.85 decision == "approved" → homoglyph allowed', threats:['Homoglyph impersonation','Handle squatting','Brand impersonation'] },
+  { id:'S02', domain:'S', inv:'Account sales and transfers are prohibited and detectable', tel:'account_transfer_signal', schema:'{ account_id, login_ip_change, device_change, value_delta, flagged, ts }', signal:'login_ip_change AND device_change AND value_delta > 0 → suspected sale', threats:['Black market account trading','Account rental service','Stolen account resale'] },
+  { id:'S03', domain:'S', inv:'Coordinated inauthentic behaviour is measurable via cluster analysis', tel:'inauthentic_cluster_event', schema:'{ cluster_id, member_ids[], behaviour_type, inauthenticity_score, ts }', signal:'inauthenticity_score > 0.8 → CIB confirmed', threats:['Review manipulation ring','Vote brigading','Narrative coordination'] },
+  { id:'S04', domain:'S', inv:'Player relationships require explicit consented formation', tel:'relationship_formation_event', schema:'{ initiator_id, target_id, consent_given, channel, ts }', signal:'consent_given == false relationship_formed == true → coerced connection', threats:['Forced follow exploit','Consent bypass','Relationship spam'] },
+  { id:'S05', domain:'S', inv:'Social reputation scores derive exclusively from validated actions', tel:'reputation_update_event', schema:'{ player_id, delta, source_action_id, validated, ts }', signal:'validated == false AND delta > 0 → reputation manipulation', threats:['Fake endorsement farm','Rep washing','Astroturfed reviews'] },
+  { id:'S06', domain:'S', inv:'High-risk actions require identity verification escalation', tel:'identity_verification_check', schema:'{ player_id, action_type, risk_level, verified, ts }', signal:'risk_level == "high" verified == false action_allowed == true → verification bypass', threats:['High-value trade without verification','Admin action without 2FA','Anonymous high-risk op'] },
+  { id:'S07', domain:'S', inv:'Alt-account ban evasion is detectable via fingerprinting', tel:'ban_evasion_signal', schema:'{ new_account_id, fingerprint_hash, matched_banned_id, action, ts }', signal:'matched_banned_id is not null AND action == "none" → evasion unmitigated', threats:['Permanent ban bypass','Troll account cycling','Harassment re-entry'] },
+  { id:'S08', domain:'S', inv:'Review and rating manipulation is measurable', tel:'review_manipulation_event', schema:'{ review_id, reviewer_id, coordinated_score, flagged, ts }', signal:'coordinated_score > 0.7 flagged == false → manipulation undetected', threats:['Fake review bombing','Competitor sabotage','Astroturf campaign'] },
+  { id:'S09', domain:'S', inv:'Automated social engagement is distinguishable from human', tel:'engagement_bot_event', schema:'{ actor_id, engagement_type, bot_probability, actioned, ts }', signal:'bot_probability > 0.85 actioned == "none" → social bot unmitigated', threats:['Follower farming','Like farming','Trending manipulation'] },
+  { id:'S10', domain:'S', inv:'Cross-platform identity correlation requires explicit consent', tel:'cross_platform_link_event', schema:'{ player_id, platform_a, platform_b, consent_given, ts }', signal:'consent_given == false link_created == true → unconsented correlation', threats:['Cross-platform stalking','Identity graph construction','Deanonymization'] },
+
+  // Trade
+  { id:'T01', domain:'T', inv:'In-game purchases are validated against payment processor confirmation', tel:'purchase_validated', schema:'{ player_id, item_id, amount, currency, processor_ref, outcome, ts }', signal:'outcome == "granted" processor_ref == null → currency injection', threats:['Fake receipt exploit','Payment bypass','Currency injection attack'] },
+  { id:'T02', domain:'T', inv:'Virtual item ownership is cryptographically provable and unforgeable', tel:'item_ownership_event', schema:'{ item_id, owner_id, signature, verified, ts }', signal:'verified == false AND item transferred → forged ownership chain', threats:['Item duplication exploit','Ownership forgery','Blockchain spoofing (NFT)'] },
+  { id:'T03', domain:'T', inv:'Real-money value conversion flows are rate-limited and flagged', tel:'rmv_conversion_event', schema:'{ player_id, amount_usd_equivalent, conversion_type, flagged, ts }', signal:'amount_usd_equivalent > threshold in window AND flagged == false → money laundering signal', threats:['Virtual currency money laundering','RMT cash-out','Value extraction bypass'] },
+  { id:'T04', domain:'T', inv:'Gift and transfer flows enforce anti-fraud checks', tel:'gift_transfer_event', schema:'{ sender_id, recipient_id, item_id, value, fraud_score, blocked, ts }', signal:'fraud_score > 0.7 blocked == false → gifting abuse', threats:['Fraudulent gifting chain','Money mule via gifting','Gift card laundering'] },
+  { id:'T05', domain:'T', inv:'Marketplace listings are screened for fraud indicators before publishing', tel:'listing_fraud_check', schema:'{ listing_id, seller_id, fraud_indicators[], cleared, ts }', signal:'fraud_indicators not empty AND cleared == true → false positive override', threats:['Fake item listing','Scam marketplace entry','Phishing link in listing'] },
+  { id:'T06', domain:'T', inv:'Chargebacks trigger automatic account review workflow', tel:'chargeback_event', schema:'{ player_id, transaction_id, amount, review_triggered, ts }', signal:'review_triggered == false → chargeback abuse undetected', threats:['Chargeback fraud','Buy-and-dispute scheme','Account standing manipulation'] },
+  { id:'T07', domain:'T', inv:'Virtual economy sinks and faucets maintain measurable balance', tel:'economy_balance_event', schema:'{ currency_id, total_supply, sink_rate, faucet_rate, balanced, ts }', signal:'balanced == false sustained → economic manipulation in progress', threats:['Inflation attack','Currency manipulation','Economy griefing'] },
+  { id:'T08', domain:'T', inv:'Item duplication is detectable via transaction log consistency', tel:'item_dupe_check', schema:'{ item_id, instance_count, expected_count, delta, anomalous, ts }', signal:'instance_count > expected_count → duplication confirmed', threats:['Dupe exploit','Rollback abuse','Item creation from void'] },
+  { id:'T09', domain:'T', inv:'Real-world scam solicitations in-game chat are blocked', tel:'scam_solicitation_event', schema:'{ message_id, sender_id, scam_type, blocked, ts }', signal:'scam_type in ["phishing","fake_trade"] AND blocked == false → scam delivered', threats:['In-game phishing link','Fake trade offer','Advance fee scam'] },
+  { id:'T10', domain:'T', inv:'Trade bot activity is distinguishable from human trading behaviour', tel:'trade_bot_event', schema:'{ trader_id, trade_velocity, pattern_score, human_probability, actioned, ts }', signal:'human_probability < 0.1 actioned == "none" → trade bot unmitigated', threats:['Automated market manipulation','Trade bot farming','Price fixing via automation'] },
+];
+
+const DOMAIN_COLORS = { G:'var(--g)', H:'var(--h)', O:'var(--o)', S:'var(--s)', T:'var(--t)' };
+const DOMAIN_ACTIVE_CLASS = { G:'g-active', H:'h-active', O:'o-active', S:'s-active', T:'t-active' };
+
+function renderIAT(filter) {
+  const tbody = document.getElementById('iat-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const rows = filter === 'ALL' ? IAT_DATA : IAT_DATA.filter(d => d.domain === filter);
+  rows.forEach((row, i) => {
+    const tr = document.createElement('tr');
+    tr.dataset.domain = row.domain;
+    tr.innerHTML = `
+      <td><span class="iat-id ${row.domain.toLowerCase()}">${row.id}</span></td>
+      <td><span class="iat-inv">${row.inv}</span></td>
+      <td><span class="iat-tel">${row.tel}</span></td>
+      <td>${row.threats.map(t => `<span class="iat-threat-tag">${t}</span>`).join('')}</td>`;
+    tbody.appendChild(tr);
+
+    const detailTr = document.createElement('tr');
+    detailTr.className = 'iat-detail-row';
+    detailTr.id = 'detail-' + row.id;
+    detailTr.innerHTML = `<td colspan="4" class="iat-detail-cell">
+      <div class="iat-schema-block">${row.tel} ${row.schema}</div>
+      <div class="iat-signal"><strong>Detection signal:</strong> ${row.signal}</div>
+    </td>`;
+    tbody.appendChild(detailTr);
+
+    tr.addEventListener('click', () => {
+      detailTr.classList.toggle('open');
+    });
+  });
+}
+
+// IAT filter buttons
+document.querySelectorAll('[data-iat-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-iat-filter]').forEach(b => {
+      b.className = 'iat-btn';
+    });
+    const f = btn.dataset.iatFilter;
+    if (f === 'ALL') {
+      btn.classList.add('active');
+    } else {
+      btn.classList.add(DOMAIN_ACTIVE_CLASS[f]);
+    }
+    renderIAT(f);
+  });
+});
+renderIAT('ALL');
+
+// ── Lens / hero wiring (identical to ghost-landing_8.html) ────────────────────
+const lens        = document.getElementById('lens');
+const lensLabel   = document.getElementById('lens-label');
+const revealLayer = document.getElementById('reveal-layer');
+const heroMarkWrap = document.querySelector('.hero-mark-wrap');
+
+const LENS_R = 160;
+let mouseX = -1000, mouseY = -1000;
+let lensX  = mouseX, lensY  = mouseY;
+let lensVisible = false;
+
+lens.style.opacity = '0';
+lensLabel.style.opacity = '0';
+
+const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+function setLensVisible(v) {
+  if (v === lensVisible) return;
+  lensVisible = v;
+  lens.style.opacity      = v ? '1' : '0';
+  lensLabel.style.opacity = v ? '0.85' : '0';
+  if (!v) revealLayer.style.clipPath = 'circle(0px at -999px -999px)';
+}
+
+if (!isTouch) {
+  window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; setLensVisible(true); });
+  window.addEventListener('mouseleave', () => setLensVisible(false));
+  window.addEventListener('mouseenter', () => setLensVisible(true));
+} else {
+  document.querySelectorAll('#ambient-stage .tile').forEach(t =>
+    t.addEventListener('click', () => t.classList.toggle('tapped'))
+  );
+}
+
+function tick() {
+  lensX += (mouseX - lensX) * 0.18;
+  lensY += (mouseY - lensY) * 0.18;
+  if (!isTouch) {
+    lens.style.left      = lensX + 'px';
+    lens.style.top       = lensY + 'px';
+    lensLabel.style.left = lensX + 'px';
+    lensLabel.style.top  = lensY + 'px';
+    if (lensVisible && !document.body.classList.contains('explored')) {
+      revealLayer.style.clipPath = `circle(${LENS_R}px at ${lensX}px ${lensY}px)`;
+    }
+  }
+  if (!isTouch && heroMarkWrap && !document.body.classList.contains('explored')) {
+    const wr = heroMarkWrap.getBoundingClientRect();
+    const wx = wr.left + wr.width  / 2;
+    const wy = wr.top  + wr.height / 2;
+    const dist = Math.sqrt((wx - lensX) ** 2 + (wy - lensY) ** 2);
+    const proximity = Math.max(0, 1 - dist / 600);
+    const shadow = heroMarkWrap.querySelector('.hero-mark-shadow');
+    if (shadow) shadow.style.opacity = (0.3 + proximity * 0.6).toFixed(2);
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+const exploreBtn = document.getElementById('explore-btn');
+const backBtn    = document.getElementById('back-btn');
+
+function explore() {
+  revealLayer.style.clipPath = 'circle(0px at -999px -999px)';
+  document.body.classList.add('explored');
+  setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
+}
+function backToHero() {
+  document.body.classList.remove('explored');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+exploreBtn.addEventListener('click', explore);
+backBtn.addEventListener('click', backToHero);
+
+let exploredByScroll = false;
+window.addEventListener('wheel', (e) => {
+  if (!exploredByScroll && !document.body.classList.contains('explored') && e.deltaY > 5) {
+    exploredByScroll = true; explore();
+  }
+}, { passive: true });
+
+let touchStartY = null;
+window.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) touchStartY = e.touches[0].clientY;
+}, { passive: true });
+window.addEventListener('touchmove', (e) => {
+  if (touchStartY !== null && e.touches.length === 1) {
+    const dy = touchStartY - e.touches[0].clientY;
+    if (dy > 40 && !document.body.classList.contains('explored')) {
+      explore(); touchStartY = null;
+    }
+  }
+}, { passive: true });
+
+const shell = document.querySelector('.tabs-shell');
+const IFRAME_TABS = new Set(['framework', 'iat', 'livesim', 'radar']);
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.tabPanel === target));
+    const isIframe = IFRAME_TABS.has(target);
+    shell.style.overflowY = isIframe ? 'hidden' : 'auto';
+    shell.classList.toggle('iframe-active', isIframe);
+    if (target === 'radar') {
+      const f = document.querySelector('[data-tab-panel="radar"] iframe');
+      if (f) f.contentWindow.postMessage({type:'tab-visible'}, '*');
+    }
+  });
+});
+// On page load, framework is active — make sure shell is in iframe mode
+shell.classList.add('iframe-active');
+shell.style.overflowY = 'hidden';
+})();
+</script>
+</body>
+</html>
