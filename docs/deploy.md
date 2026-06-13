@@ -1,6 +1,6 @@
 # Self-Deployment Guide
 
-This guide covers deploying the GHOST Live Simulation and Threat Radar to your own AWS account. The stack is fully defined in `cloudlaunch/` and deployed with a single script.
+This guide covers deploying the GHOST Live Simulation and Threat Radar to your own AWS account. The stack is fully defined in `src/deploy/` and deployed with a single script.
 
 ---
 
@@ -20,7 +20,7 @@ This guide covers deploying the GHOST Live Simulation and Threat Radar to your o
 
 ```bash
 git clone https://github.com/TheGHOSTModel/ghost.git
-cd ghost/cloudlaunch
+cd ghost/src/deploy
 
 export GHOST_AI_KEY="your-api-key-here"
 bash deploy.sh
@@ -74,7 +74,7 @@ The GHOST AI harm-detection component uses an **OpenAI-compatible chat completio
 | `GHOST_AI_MODEL` | set in `template.yaml` | `gpt-oss-120b` | Model name sent in the API request |
 | `GHOST_AI_BASE_URL` | set in `template.yaml` | `https://api.cerebras.ai/v1` | Base URL of the chat completions endpoint |
 
-To use a different provider, update the three `GHOST_AI_*` environment variables in `cloudlaunch/template.yaml` under `ApiFunction → Environment → Variables` before deploying:
+To use a different provider, update the three `GHOST_AI_*` environment variables in `src/deploy/template.yaml` under `ApiFunction → Environment → Variables` before deploying:
 
 ```yaml
 GHOST_AI_BASE_URL: "https://api.openai.com/v1"

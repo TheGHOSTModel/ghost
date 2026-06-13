@@ -152,7 +152,7 @@ Threat Radar frontend (Globe.gl)
 
 ## Production Deployment (AWS)
 
-The production stack is defined in `cloudlaunch/template.yaml` and deployed via AWS SAM.
+The production stack is defined in `src/deploy/template.yaml` and deployed via AWS SAM.
 
 ### Architecture Diagram
 
@@ -232,7 +232,7 @@ Browser → [custom domain]
 ### Build Pipeline
 
 ```
-cloudlaunch/
+src/deploy/
 ├── template.yaml            SAM infrastructure definition (single source of truth)
 ├── deploy.sh                One-command build + deploy script
 ├── backend/
