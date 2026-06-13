@@ -10,7 +10,7 @@ Target: Full AWS deployment on custom domain
 
 ### 1. Move Cerebras API key out of template.yaml
 **File:** `cloudlaunch/template.yaml:83`  
-The key `REDACTED_API_KEY` is in plaintext and committed to git.  
+The Cerebras API key is passed as a SAM `--parameter-overrides` value at deploy time and stored in the Lambda environment — it should never be committed to source control.  
 **Fix:** Store in AWS Secrets Manager. Fetch at Lambda init via `boto3.client('secretsmanager')`.
 
 ### 2. Fix hardcoded S3 bucket name in frontend build
