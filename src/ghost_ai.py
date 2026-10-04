@@ -3,9 +3,9 @@ GHOST AI — Conditional Harm Monitoring Module
 Pluggable LLM backend. Configure via environment variables or the
 /api/config/ghost-ai REST endpoint at runtime.
 
-  GHOST_AI_PROVIDER  = "anthropic"  (default)
+  GHOST_AI_PROVIDER  = "gemini"  (default)
   GHOST_AI_API_KEY   = "<your key>"
-  GHOST_AI_MODEL     = "claude-sonnet-4-6"
+  GHOST_AI_MODEL     = "gemini-3.8-flash"
 """
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ from typing import Dict, List
 
 # ── Runtime-patchable config ──────────────────────────────────────────────────
 config: Dict[str, str] = {
-    "provider": os.getenv("GHOST_AI_PROVIDER", "cerebras"),
-    "api_key":  os.getenv("GHOST_AI_API_KEY",  os.getenv("CEREBRAS_API_KEY", "")),
-    "model":    os.getenv("GHOST_AI_MODEL",     "gpt-oss-120b"),
+    "provider": os.getenv("GHOST_AI_PROVIDER", "gemini"),
+    "api_key":  os.getenv("GHOST_AI_API_KEY",  os.getenv("GEMINI_API_KEY", "")),
+    "model":    os.getenv("GHOST_AI_MODEL",     "gemini-3.8-flash"),
 }
 
 # ── System prompt (verbatim from GHOST spec) ──────────────────────────────────
@@ -86,6 +86,8 @@ async def analyze(messages: List[dict], player_flags: Dict[str, dict]) -> dict:
         result = await _call_cerebras(user_message)
     elif provider == "anthropic":
         result = await _call_anthropic(user_message)
+    elif provider == "gemini":
+        result = await _call_gemini(user_message)
     else:
         return {"analysis_triggered": False, "error": f"unknown_provider:{provider}"}
 
@@ -116,6 +118,38 @@ async def _call_cerebras(user_message: str) -> dict:
             )
         )
         text = completion.choices[0].message.content.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        return json.loads(text.strip())
+    except Exception as exc:
+        return {"analysis_triggered": False, "error": str(exc)[:200]}
+
+
+async def _call_gemini(user_message: str) -> dict:
+    try:
+        import httpx
+        # Google's OpenAI-compatible endpoint — same chat/completions shape as Cerebras.
+        url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                url,
+                headers={"Authorization": f"Bearer {config['api_key']}"},
+                json={
+                    "model": config["model"],
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user",   "content": user_message},
+                    ],
+                    "max_tokens": 768,
+                    "temperature": 0.2,
+                    "response_format": {"type": "json_object"},
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        text = data["choices"][0]["message"]["content"].strip()
         if text.startswith("```"):
             text = text.split("```")[1]
             if text.startswith("json"):
